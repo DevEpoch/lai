@@ -246,6 +246,18 @@ onUnmounted(() => window.clearInterval(timer));
                 history and files, open <a :href="svcUrl('open-webui :3001') ?? 'http://localhost:3001'" target="_blank">Open WebUI ↗</a></div>
             </div>
 
+            <div v-if="o?.updates && (o.updates.new_models.length || o.updates.catalog_newer)" class="card wide">
+              <h3>✨ New AI models spotted ({{ o.updates.when.slice(0, 10) }})</h3>
+              <div class="dim" v-if="o.updates.catalog_newer">A newer recommendation catalog is published — apply it with <span class="mono">lai catalog --update</span>.</div>
+              <table v-if="o.updates.new_models.length"><tbody>
+                <tr v-for="m in o.updates.new_models.slice(0, 5)" :key="m.id">
+                  <td class="mono">{{ m.id }}</td>
+                  <td class="dim" style="text-align:right">{{ m.downloads.toLocaleString() }} downloads</td>
+                </tr>
+              </tbody></table>
+              <div class="dim mt">Nothing changes by itself — review them, add the good ones to the catalog, re-plan, and benchmark. Check runs: <span class="mono">lai refresh</span> (schedule: <span class="mono">--schedule weekly</span>).</div>
+            </div>
+
             <div class="card">
               <h3>What can I do?</h3>
               <div class="dim">

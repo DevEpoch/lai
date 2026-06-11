@@ -57,6 +57,7 @@ def cmd_ui(args):
                        for k, v in cat.get("stacks", {}).items()
                        if not k.startswith("_")},
             "remote": remote_cfg(),
+            "updates": load_json(STATE / "updates.json"),
             "lai_version": VERSION,
             "skills": {k: v.get("description", "")
                        for k, v in list_skills().items()},

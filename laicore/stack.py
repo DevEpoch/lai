@@ -331,8 +331,8 @@ def cmd_catalog(args):
             except Exception as e:
                 code = getattr(e, "code", None)
                 if code in (401, 403):
-                    warn(f"{mid}: {m['repo']} exists but is gated - "
-                         "accept its license on huggingface.co first")
+                    warn(f"{mid}: {m['repo']} is gated or not public yet - "
+                         "check the name / accept its license on huggingface.co")
                 else:
                     fail(f"{mid}: {m['repo']} NOT FOUND - update this entry "
                          f"in {CATALOG_PATH.name}")
@@ -1598,3 +1598,197 @@ def cmd_go(args):
     2. Type in the chat box: "write a snake game in Python"
     3. In a terminal:  lai chat
 """)
+
+
+def notify_os(title, msg):
+    """Best-effort native OS notification (toast / notify-send / osascript)."""
+    title = re.sub(r"[\"`$']", "", title)[:60]
+    msg = re.sub(r"[\"`$']", "", msg)[:200]
+    try:
+        if IS_WIN:
+            ps = (
+                "[Windows.UI.Notifications.ToastNotificationManager, "
+                "Windows.UI.Notifications, ContentType=WindowsRuntime] "
+                "| Out-Null; "
+                "$t = [Windows.UI.Notifications.ToastNotificationManager]::"
+                "GetTemplateContent([Windows.UI.Notifications."
+                "ToastTemplateType]::ToastText02); "
+                "$x = $t.GetElementsByTagName('text'); "
+                f"$x.Item(0).AppendChild($t.CreateTextNode('{title}')) "
+                "| Out-Null; "
+                f"$x.Item(1).AppendChild($t.CreateTextNode('{msg}')) "
+                "| Out-Null; "
+                "[Windows.UI.Notifications.ToastNotificationManager]::"
+                "CreateToastNotifier('lai').Show("
+                "[Windows.UI.Notifications.ToastNotification]::new($t))")
+            subprocess.run(["powershell", "-NoProfile", "-Command", ps],
+                           capture_output=True, timeout=20)
+        elif IS_MAC:
+            subprocess.run(["osascript", "-e",
+                            f'display notification "{msg}" '
+                            f'with title "{title}"'],
+                           capture_output=True, timeout=10)
+        elif shutil.which("notify-send"):
+            subprocess.run(["notify-send", title, msg],
+                           capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+
+def cmd_refresh(args):
+    """Look for newly released models + catalog updates; notify on findings."""
+    sched = getattr(args, "schedule", None)
+    if sched:
+        return _refresh_schedule(sched)
+    cat = load_catalog()
+    quiet = getattr(args, "quiet", False)
+    state = load_json(STATE / "updates.json") or {}
+    seen = set(state.get("seen", []))
+    findings = []
+
+    # 1. is a newer published catalog available?
+    catalog_newer = False
+    try:
+        status, raw = http_get(CATALOG_UPDATE_URL, timeout=30)
+        remote_ver = json.loads(raw.decode("utf-8-sig")).get(
+            "catalog_version", "")
+        catalog_newer = remote_ver > cat.get("catalog_version", "")
+        if catalog_newer:
+            findings.append(f"published catalog {remote_ver} is newer - "
+                            "apply with: lai catalog --update")
+    except Exception:
+        pass
+
+    # 2. do all current repos still resolve?
+    broken = []
+    for mid, m in cat["models"].items():
+        try:
+            http_get(f"https://huggingface.co/api/models/{m['repo']}",
+                     timeout=15)
+        except Exception as e:
+            if getattr(e, "code", None) not in (401, 403):  # gated is fine
+                broken.append(mid)
+    if broken:
+        findings.append("repos no longer resolve: " + ", ".join(broken) +
+                        f" - update entries in {CATALOG_PATH.name}")
+
+    # 3. discover fresh GGUF releases on Hugging Face
+    disc = cat.get("discovery", {})
+    known = {m["repo"].lower() for m in cat["models"].values()}
+    fresh = {}
+    cutoff = time.time() - disc.get("max_age_days", 90) * 86400
+    for author in disc.get("authors", []):
+        for q in disc.get("queries", []):
+            try:
+                rows = http_json(
+                    "https://huggingface.co/api/models"
+                    f"?author={author}&search={q}&sort=createdAt"
+                    "&direction=-1&limit=10&filter=gguf", timeout=30)
+            except Exception:
+                continue
+            for r in rows:
+                rid = r.get("id", "")
+                dl = r.get("downloads", 0)
+                created = r.get("createdAt", "")
+                if rid.lower() in known or rid in seen:
+                    continue
+                if dl < disc.get("min_downloads", 2000):
+                    continue
+                try:
+                    ts = datetime.fromisoformat(
+                        created.replace("Z", "+00:00")).timestamp()
+                    if ts < cutoff:
+                        continue
+                except (ValueError, AttributeError):
+                    continue
+                fresh[rid] = dl
+    new_models = sorted(fresh.items(), key=lambda x: -x[1])[:10]
+    if new_models:
+        findings.append(f"{len(new_models)} new GGUF model(s) since this "
+                        "catalog - review below, add the good ones to "
+                        "catalog.json, then: lai plan")
+
+    save_text(STATE / "updates.json", json.dumps({
+        "when": datetime.now().isoformat(timespec="seconds"),
+        "catalog_newer": catalog_newer,
+        "broken": broken,
+        "new_models": [{"id": i, "downloads": d} for i, d in new_models],
+        "seen": sorted(seen | {i for i, _ in new_models})[-200:],
+    }, indent=2))
+
+    if not quiet:
+        print()
+        if findings:
+            for f_ in findings:
+                warn(f_)
+            for rid, dl in new_models:
+                print(f"    new: {rid:<52} {dl:>8,} downloads")
+            info("nothing changes without you: review, edit the catalog, "
+                 "re-plan, bench - approval stays yours")
+        else:
+            ok("everything is current: catalog, repos, and no notable new "
+               "models for your hardware")
+    if findings:
+        notify_os("lai: model updates found",
+                  findings[0] + (" (+more)" if len(findings) > 1 else ""))
+
+
+def _refresh_schedule(mode):
+    lai = ROOT / "lai.py"
+    if IS_WIN:
+        if mode == "off":
+            subprocess.run(["schtasks", "/Delete", "/F", "/TN",
+                            "lai-refresh"], capture_output=True)
+            ok("scheduled refresh removed")
+            return
+        pyw = Path(sys.executable).with_name("pythonw.exe")
+        py = pyw if pyw.exists() else Path(sys.executable)
+        freq = {"daily": ["/SC", "DAILY"],
+                "weekly": ["/SC", "WEEKLY", "/D", "SUN"]}[mode]
+        r = subprocess.run(
+            ["schtasks", "/Create", "/F", "/TN", "lai-refresh",
+             "/TR", f'"{py}" "{lai}" refresh --quiet --yes'] + freq,
+            capture_output=True, text=True)
+        if r.returncode != 0:
+            die(f"schtasks failed: {r.stderr.strip()}")
+    elif IS_MAC:
+        plist = Path.home() / "Library/LaunchAgents/com.local-ai.refresh.plist"
+        if mode == "off":
+            subprocess.run(["launchctl", "unload", str(plist)],
+                           capture_output=True)
+            plist.unlink(missing_ok=True)
+            ok("scheduled refresh removed")
+            return
+        day = "<key>Weekday</key><integer>0</integer>" \
+            if mode == "weekly" else ""
+        save_text(plist, f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.local-ai.refresh</string>
+  <key>ProgramArguments</key>
+  <array><string>{sys.executable}</string><string>{lai}</string>
+  <string>refresh</string><string>--quiet</string><string>--yes</string></array>
+  <key>StartCalendarInterval</key>
+  <dict>{day}<key>Hour</key><integer>12</integer></dict>
+</dict></plist>
+""")
+        subprocess.run(["launchctl", "load", "-w", str(plist)])
+    else:
+        marker = "# lai-refresh"
+        cur = subprocess.run(["crontab", "-l"], capture_output=True,
+                             text=True).stdout
+        lines = [ln for ln in cur.splitlines() if marker not in ln]
+        if mode != "off":
+            spec = "0 12 * * 0" if mode == "weekly" else "0 12 * * *"
+            lines.append(f"{spec} {sys.executable} {lai} refresh --quiet "
+                         f"--yes {marker}")
+        p = subprocess.run(["crontab", "-"], input="\n".join(lines) + "\n",
+                           capture_output=True, text=True)
+        if p.returncode != 0:
+            die("crontab failed - is cron installed?")
+        if mode == "off":
+            ok("scheduled refresh removed")
+            return
+    ok(f"refresh scheduled ({mode}) - you will get an OS notification "
+       "whenever new models or catalog updates appear")

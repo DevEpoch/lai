@@ -83,7 +83,7 @@
     },
     "gemma-4-26b-a4b": {
       "name": "Gemma 4 26B-A4B (Google)",
-      "repo": "unsloth/gemma-4-26b-a4b-it-GGUF",
+      "repo": "unsloth/gemma-4-26B-A4B-it-GGUF",
       "include": ["*Q4_K_M*"],
       "disk_gb": 15.5,
       "moe": true,
@@ -106,7 +106,7 @@
     },
     "deepseek-v4-flash": {
       "name": "DeepSeek V4-Flash (284B-A13B)",
-      "repo": "unsloth/DeepSeek-V4-Flash-GGUF",
+      "repo": "unsloth/DeepSeek-V4-Flash",
       "include": ["*Q4_K_M*"],
       "disk_gb": 158.0,
       "moe": true,
@@ -114,18 +114,17 @@
       "fits_vram_gb": 170,
       "hybrid_ram_gb": 192,
       "verify": true,
-      "why": "frontier-class open coding (~80 SWE-bench Verified) for multi-GPU rigs (2x 96 GB class); gated repo - accept the license on HF first"
+      "why": "frontier-class open coding (~80 SWE-bench Verified) for multi-GPU rigs (2x 96 GB class); GGUF quants not published yet - `lai refresh` will spot them when they land"
     },
     "qwen3-coder-next": {
       "name": "Qwen3-Coder-Next (80B-A3B class)",
-      "repo": "unsloth/Qwen3-Coder-Next-80B-A3B-Instruct-GGUF",
+      "repo": "unsloth/Qwen3-Coder-Next-GGUF",
       "include": ["*Q4_K_M*"],
       "disk_gb": 45.0,
       "moe": true,
       "roles": ["coder"],
       "fits_vram_gb": 48,
       "hybrid_ram_gb": 64,
-      "verify": true,
       "why": "near-frontier agentic coder (~58.7% SWE-bench Verified); hybrid on 24 GB GPU + 64 GB RAM, resident at 48 GB+"
     },
     "qwen3-vl-8b": {
@@ -202,6 +201,14 @@
     }
   },
 
+  "discovery": {
+    "_comment": "Used by `lai refresh`: finds GGUF models newer than this catalog. Tune freely.",
+    "authors": ["unsloth", "Qwen", "bartowski", "google"],
+    "queries": ["coder", "coding", "instruct"],
+    "max_age_days": 180,
+    "min_downloads": 2000
+  },
+
   "cloud": {
     "_comment": "Curated best-value picks shown by `lai cloud list` (verify names/prices on the provider - this is editable data like everything else).",
     "openrouter": {"recommended": [
@@ -265,6 +272,15 @@
       },
       "extensions": ["ms-python.python", "ms-toolsai.jupyter", "charliermarsh.ruff"],
       "notes": ["vision on: reading plots and notebook screenshots"]
+    },
+    "game": {
+      "label": "Game development (2D/3D, sprites, gameplay code)",
+      "overlay": {
+        "vision": {"enabled": true},
+        "thinker": {"enabled": false}
+      },
+      "extensions": ["geequlim.godot-tools (Godot)", "ms-python.python (pygame)"],
+      "notes": ["vision on: screenshots of sprites/scenes are daily inputs in game dev"]
     },
     "scripts": {
       "label": "Scripts & DevOps (shell, automation, IaC)",
@@ -456,6 +472,61 @@
       "extensions": ["tauri-apps.tauri-vscode", "rust-lang.rust-analyzer"],
       "gitignore": [],
       "required_roles": ["coder", "vision", "thinker", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "vue-app": {
+      "label": "Web app (Vite + Vue 3 + TypeScript)",
+      "usecase": "web",
+      "toolchains": [{"bin": "npm", "hint": "install Node.js: winget install OpenJS.NodeJS.LTS | brew install node"}],
+      "init_cmds": [["npm", "create", "vite@latest", ".", "--", "--template", "vue-ts"], ["npm", "install"]],
+      "files": {},
+      "agents": {"build": "npm run build", "test": "npm test", "lint": "npm run lint", "run": "npm run dev"},
+      "extensions": ["Vue.volar", "dbaeumer.vscode-eslint"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "static-site": {
+      "label": "Simple website (HTML + CSS, no build tools - great first project)",
+      "usecase": "web",
+      "toolchains": [],
+      "init_cmds": [],
+      "files": {
+        "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>{name}</title>\n  <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n  <main>\n    <h1>Hello from {name}!</h1>\n    <p>Edit me in <code>index.html</code> - then ask your AI to make me amazing.</p>\n  </main>\n</body>\n</html>\n",
+        "style.css": "body {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n  display: grid;\n  place-items: center;\n  min-height: 100vh;\n  background: #0d1017;\n  color: #dbe1ec;\n}\nmain { text-align: center; }\nh1 { color: #4da3ff; }\n"},
+      "agents": {"build": "-", "test": "-", "lint": "-", "run": "open index.html in a browser (double-click it)"},
+      "extensions": ["ritwickdey.LiveServer"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "embeddings"],
+      "min_ctx": 8192
+    },
+    "python-game": {
+      "label": "2D game (Python + pygame)",
+      "usecase": "game",
+      "toolchains": [{"bin": "python", "hint": "already present (lai runs on it)"}],
+      "init_cmds": [],
+      "files": {
+        "pyproject.toml": "[project]\nname = \"{name}\"\nversion = \"0.1.0\"\nrequires-python = \">=3.10\"\ndependencies = [\"pygame\"]\n",
+        "main.py": "\"\"\"A tiny starter game: a bouncing square. Run: pip install pygame && python main.py\"\"\"\nimport pygame\n\npygame.init()\nscreen = pygame.display.set_mode((800, 600))\npygame.display.set_caption(\"{name}\")\nclock = pygame.time.Clock()\nx, y, dx, dy = 100, 100, 4, 3\n\nrunning = True\nwhile running:\n    for event in pygame.event.get():\n        if event.type == pygame.QUIT:\n            running = False\n    x, y = x + dx, y + dy\n    if x < 0 or x > 760:\n        dx = -dx\n    if y < 0 or y > 560:\n        dy = -dy\n    screen.fill((13, 16, 23))\n    pygame.draw.rect(screen, (77, 163, 255), (x, y, 40, 40))\n    pygame.display.flip()\n    clock.tick(60)\n\npygame.quit()\n"},
+      "agents": {"build": "-", "test": "python -c \"import main\" (smoke)", "lint": "ruff check .", "run": "python main.py"},
+      "extensions": ["ms-python.python"],
+      "gitignore": ["__pycache__/", ".venv/"],
+      "required_roles": ["coder", "vision", "embeddings"],
+      "min_ctx": 16384
+    },
+    "godot-game": {
+      "label": "Game (Godot 4 project skeleton)",
+      "usecase": "game",
+      "toolchains": [{"bin": "godot", "hint": "optional - download the Godot 4 editor from godotengine.org and open this folder"}],
+      "init_cmds": [],
+      "files": {
+        "project.godot": "; Engine configuration file - open this folder with the Godot 4 editor.\nconfig_version=5\n\n[application]\nconfig/name=\"{name}\"\nrun/main_scene=\"res://main.tscn\"\nconfig/features=PackedStringArray(\"4.2\")\n",
+        "main.tscn": "[gd_scene format=3]\n\n[node name=\"Main\" type=\"Node2D\"]\n",
+        "main.gd": "extends Node2D\n\nfunc _ready() -> void:\n    print(\"hello from {name}\")\n"},
+      "agents": {"build": "-", "test": "godot --headless --check-only (if godot on PATH)", "lint": "-", "run": "open the folder in the Godot editor and press F5"},
+      "extensions": ["geequlim.godot-tools"],
+      "gitignore": [".godot/"],
+      "required_roles": ["coder", "vision", "embeddings"],
       "min_ctx": 16384
     },
     "python-ml": {

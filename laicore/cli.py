@@ -39,6 +39,8 @@ Commands:
   autostart  install a login service (Startup/systemd/launchd) + watchdog
   watchdog   start the stack and auto-restart it if it dies (foreground)
   upgrade    check llama.cpp / llama-swap releases against installed
+  refresh    look for NEW models + catalog updates; notifies you; can run
+             on a schedule (lai refresh --schedule weekly)
   ui         open the management dashboard in your browser (localhost)
   new        scaffold a project (stack + path) with the AI layer included
   gate       verify/fix that this machine satisfies a project's .lai/ config
@@ -119,7 +121,7 @@ def main():
         "gate": cmd_gate, "skill": cmd_skill, "git": cmd_git,
         "connect": cmd_connect, "share": cmd_share, "tune": cmd_tune,
         "docs": cmd_docs, "chat": cmd_chat, "shortcut": cmd_shortcut,
-        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go,
+        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh,
         "vscode": cmd_vscode,
     }
     for name in commands:
@@ -181,6 +183,13 @@ def main():
             sp.add_argument("--param", action="append", default=None,
                             help="extra provider/model setting k=v "
                                  "(repeatable), e.g. reasoning_effort=low")
+        if name == "refresh":
+            sp.add_argument("--quiet", action="store_true",
+                            help="no console output; OS notification only "
+                                 "on findings (used by the schedule)")
+            sp.add_argument("--schedule", default=None,
+                            choices=["daily", "weekly", "off"],
+                            help="install/remove an automatic check")
         if name == "ports":
             sp.add_argument("action", nargs="?", default="show",
                             choices=["show", "set", "check"])

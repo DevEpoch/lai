@@ -34,6 +34,11 @@ export interface Overview {
   logs: string[];
   remote: { host: string; port: number } | null;
   lai_version: string;
+  updates?: {
+    when: string;
+    catalog_newer: boolean;
+    new_models: { id: string; downloads: number }[];
+  } | null;
 }
 
 export interface ServiceStatus { name: string; up: boolean }
