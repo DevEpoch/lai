@@ -92,3 +92,18 @@ project's `AGENTS.md`:
 
 Everything stays local: fetching the page is the only network access; embedding
 and storage never leave your machines.
+
+## Downloads on slow or unstable networks
+
+lai assumes the worst network and survives it:
+
+- **Byte-true resume**: models stream via ranged HTTP into `.part` files -
+  any stall, kill, or reboot resumes from the exact byte (the hf-hub stack,
+  whose partial files are per-session, is kept only as a late fallback).
+- **Stall watchdog**: a transfer that moves nothing for 3 minutes is killed
+  and retried automatically; one download at a time (cross-process mutex).
+- **Mirrors**: `lai mirror` measures real throughput from every endpoint in
+  the catalog `hf_mirrors` list and switches to the fastest; retries rotate
+  mirrors automatically. Add your own HF-protocol mirror to the list.
+- `lai hftoken` raises rate limits; `lai doctor` zips the evidence when
+  something still looks wrong.

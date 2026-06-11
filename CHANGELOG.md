@@ -4,6 +4,37 @@ All notable changes to lai. Format: [Keep a Changelog](https://keepachangelog.co
 Rule: every `VERSION` bump in `laicore/core.py` adds an entry here - `lai update`
 shows users exactly these entries when offering an update.
 
+## [0.11.0] - 2026-06-11
+
+### Added
+- Bulletproof downloads for slow/unstable networks: native ranged-HTTP
+  downloader (byte-true resume across stalls, kills, reboots) as the
+  primary path, stall watchdog, single-download mutex, stale-lock
+  cleanup, `lai mirror` speed-tests and mirror rotation between retries.
+- `lai doctor`: full diagnosis + support zip (logs + state, no secrets).
+- Testing across the project: 36 Python tests (planning kernel, parsers,
+  catalog integrity, dashboard API integration, repo hygiene), 9 Vitest
+  dashboard tests (i18n parity/RTL, api client), 9 extension tests;
+  `lai selftest`; CI runs all suites on three OSes.
+- VS Code extension 0.3.0: Claude-Code-style "Local AI Chat" sidebar
+  (streaming, add-selection context, insert code into editor) +
+  Marketplace publish pipeline (publish.ps1, release-vscode workflow).
+- Skills 9 -> 14: performance, a11y, refactor, browser (Playwright MCP),
+  security-scan (Semgrep MCP); `lai skill new` creates custom skills
+  (hand-written or model-drafted), globally or inside a project.
+- Models 13 -> 17: Gemma 4 (26B-A4B, 12B), Kimi-Linear-48B-A3B
+  (long-context champion), LFM2.5-1.2B (new cpu-min default),
+  DeepSeek V4-Flash (watch). Stacks 15 -> 21: vue-app, static-site,
+  python-game, godot-game, astro-site, expo-app (+ game use case).
+- Dashboard: Home chat streams token-by-token; honest download progress
+  (dead chunks excluded); truthful Start/Download buttons (409 on no-op).
+- `lai docs add` uses docling when installed (layout/tables, docx/pptx).
+
+### Fixed
+- Stale pids no longer dead-end `lai start`; concurrent downloads
+  impossible; per-session .incomplete restarts eliminated; changelog
+  version comparison is numeric.
+
 ## [0.10.0] - 2026-06-09
 
 ### Added

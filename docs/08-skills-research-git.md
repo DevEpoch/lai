@@ -14,7 +14,10 @@ lai skill add tdd --path ~/myproj   # into another project
 Installed files are committed with the project, so the whole team gets the skill -
 same identity-travels-in-the-repo model as everything else. There is no runtime to
 learn: skills land in `.roo/rules*/` and `.roomodes`, which Roo Code already loads.
-`lai new` installs `interview`, `review`, `tdd`, and `adr` automatically.
+`lai new` installs `interview`, `review`, `tdd`, `adr`, and `memory`
+automatically. Create your own with `lai skill new <name> [--ai "what it
+enforces"] [--project <path>]` - hand-written or drafted by your local model;
+project skills live in `.lai/skills/` and travel with the repo.
 
 | Skill | What it adds |
 | --- | --- |
@@ -23,6 +26,13 @@ learn: skills land in `.roo/rules*/` and `.roomodes`, which Roo Code already loa
 | `research` | **Research mode**: search -> fetch -> cross-check -> cite loop, plus `.roo/mcp.json` wiring the web tools (below). |
 | `tdd` | Test-first rules injected into the built-in Code mode. |
 | `adr` | All modes record architecture decisions to `docs/adr/` and consult them first. |
+| `memory` | Agents read `.lai/memory.md` at task start and append durable, dated project facts. |
+| `debug` | Scientific debugging: reproduce first, hypothesize, fix the cause, prove with the repro. |
+| `security` / `security-scan` | The checklist, and its enforcement: Semgrep MCP scans the agent's own diff. |
+| `performance` | Measure-first optimization: budgets, before/after numbers, regression benchmarks. |
+| `a11y` | WCAG-minded checklist on every UI change. |
+| `refactor` | Behavior-preserving rungs, green tests between each, grep-the-old-name before done. |
+| `browser` | Playwright MCP: agents drive a real browser and verify UI flows before claiming done. |
 
 Write your own: copy a skill folder, edit `skill.json` (+ `mode.json` for a custom
 mode), put files under `project/` mirroring where they land. Mode merging into

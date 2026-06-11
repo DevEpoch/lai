@@ -138,8 +138,10 @@ Full team workflow: [docs/07-projects.md](docs/07-projects.md).
 ## Skills, research, and git AI
 
 ```text
-lai skill list / add <name>    # 9 built-in skills: interview, review, research, tdd,
-                               #   adr, memory, debug, security, docs-first
+lai skill list / add <name>    # 14 built-in skills: interview, review, research, tdd,
+                               #   adr, memory, debug, security, docs-first, performance,
+                               #   a11y, refactor, browser (Playwright MCP - agents verify
+                               #   UIs in a real browser), security-scan (Semgrep MCP)
 lai skill new <name> [--ai "description"]   # create your own - hand-written or drafted
                                #   by your local model; --project puts it IN the repo
 lai git review [--base ref]    # AI code review of your diff, [BUG/RISK/TEST] file:line
@@ -169,6 +171,9 @@ lai vscode                 # build + install the TypeScript VS Code companion ex
 lai cloud add openrouter   # OPTIONAL cloud fallback (OpenRouter/OpenAI/Anthropic):
                            #   used only via or:/oa:/an: model prefixes - local stays default
 lai info                # one-screen summary of the entire environment
+lai doctor              # full diagnosis + support zip (logs + state, never secrets)
+lai mirror              # speed-test HF mirrors; downloads rotate mirrors on retries
+                        #   (downloads are byte-resumable through stalls, kills, reboots)
 lai catalog --update    # pull the latest published recommendation table (diff + approval)
 lai refresh             # discover NEW models on Hugging Face + catalog/self updates;
                         #   OS notification on findings; --schedule weekly automates it
@@ -248,8 +253,10 @@ working on lai itself.
 ## Contributing
 
 Most contributions are catalog edits, not code - see [CONTRIBUTING.md](CONTRIBUTING.md).
-`lai selftest` runs the offline test suite (30+ tests: planning kernel, parsers,
-catalog integrity, i18n parity, UI artifacts); CI runs it on Windows, Linux, and
+`lai selftest` runs the Python suite (36 tests: planning kernel, parsers,
+catalog integrity, dashboard API integration, repo hygiene); Vitest covers the
+dashboard (i18n parity/RTL, api client) and the extension (9 tests each); CI runs
+all suites on Windows, Linux, and
 macOS, and pull requests get a free automated AI review via GitHub Models.
 Every release documents its changes in [CHANGELOG.md](CHANGELOG.md) - that is
 what `lai update` shows users before applying.

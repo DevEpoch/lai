@@ -30,7 +30,9 @@ anywhere: python lai.py <command> [--yes]
 | `check` | hardware + dependency report with per-OS install hints |
 | `refresh [--quiet] [--schedule daily\|weekly\|off]` | discover new HF models + catalog/self updates; OS notifications |
 | `update [--check] [--policy ask\|auto\|never] [--list] [--to <ver>]` | git-based differential self-update with CHANGELOG delta |
-| `selftest` | offline test suite (tests/, 30+ unittest cases) |
+| `selftest` | offline test suite (36 unittest cases incl. live API integration) |
+| `doctor` | full diagnosis + support zip (logs + state, never secrets) |
+| `mirror [--set URL]` | speed-test HF mirrors (catalog hf_mirrors); retries rotate mirrors |
 | `setup` | guided install: ports check -> plan -> engines -> models -> config -> IDE -> docker -> start |
 | `plan [--use-case X] [--vram-gb N]` | detect hardware, match tier, apply use-case overlay, review/edit, save to state/choices.json |
 | `choices` | show current per-role model selections + fitting alternatives |
@@ -46,7 +48,7 @@ anywhere: python lai.py <command> [--yes]
 | `tune` | timed llama-server trials (offload depth / KV / threads), apply fastest |
 | `new [--stack S --path P]` | scaffold a project (ecosystem generator + AI layer) |
 | `gate [path] [--fix]` | verify/fix this machine against a project's .lai/project.json |
-| `skill list / add / new <name> [--ai "desc"] [--project P]` | 9 built-in skill packs; create custom ones (model-draftable); project-local in .lai/skills/ |
+| `skill list / add / new <name> [--ai "desc"] [--project P]` | 14 built-in skill packs (incl. Playwright-MCP browser + Semgrep scan); custom ones model-draftable; project-local in .lai/skills/ |
 | `git review\|commit\|resolve\|explain [--model M]` | AI git helper on the local endpoint |
 | `chat [--model M] [--polish]` | streaming terminal REPL; @file attach; /model /polish /clear |
 | `docs add <url\|file\|pdf> / search "q" / list` | per-project documentation RAG (Qdrant) |
@@ -95,7 +97,7 @@ AGENTS.md            agent conventions + build/test commands (read by Roo/Cline/
 | --- | --- | --- |
 | 8080 | llama-swap | OpenAI-compatible: `/v1/chat/completions`, `/v1/models`; model ids = role names `coder`, `thinker`, `vision` (+`coder-longctx`); streaming + tools (`--jinja`) supported |
 | 8081 / 8082 | autocomplete / embeddings | always-on llama-servers; `/v1/completions` (FIM), `/v1/embeddings` |
-| 8090 | dashboard + JSON API | GET/POST under `/api/`: overview, status, candidates, downloads, projects, ports, cloudcfg, logs; POST plan, set, config, start/stop/restart, download, bench, gate, new, skill, verify, ports, cloudcfg |
+| 8090 | dashboard + JSON API | GET/POST under `/api/`: overview, status, candidates, downloads, projects, ports, cloudcfg, logs; POST plan, set, config, start/stop/restart, download, bench, gate, new, skill, verify, ports, cloudcfg, easy, chat, chat-stream (SSE) |
 | 6333 | Qdrant | repo RAG + `lai docs` collections (`lai-docs-<project>`) |
 | 3000 / 3001 / 8888 | OpenHands / Open WebUI / SearXNG | docker services |
 
