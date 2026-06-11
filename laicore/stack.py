@@ -511,33 +511,72 @@ def cmd_models(args):
         return sum(f.stat().st_size for f in Path(p).rglob("*")
                    if f.is_file()) / 2 ** 30 if Path(p).exists() else 0.0
 
+    def _attempt(m, dest, use_ht, endpoint):
+        """One download attempt in a subprocess, killed if bytes stop
+        moving for 3 minutes (hf_transfer can hang silently on flaky
+        networks - a stall watchdog is the only reliable cure)."""
+        code = ("import sys, json\n"
+                "from huggingface_hub import snapshot_download\n"
+                "snapshot_download(repo_id=sys.argv[1], "
+                "allow_patterns=json.loads(sys.argv[2]), "
+                "local_dir=sys.argv[3])\n")
+        env = os.environ.copy()
+        env["HF_HUB_ENABLE_HF_TRANSFER"] = "1" if use_ht else "0"
+        env.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "30")
+        env["HF_HUB_DISABLE_XET"] = "1"  # classic backend resumes after
+        # kills; xet restarts from zero - fatal on slow/flaky links
+        env["HF_ENDPOINT"] = endpoint
+        proc = subprocess.Popen(
+            [sys.executable, "-c", code, m["repo"],
+             json.dumps(m["include"]), str(dest)], env=env)
+        last, still = -1.0, 0
+        while proc.poll() is None:
+            time.sleep(20)
+            have = _dir_gb(dest)
+            pct = min(100, int(have / max(m["disk_gb"], 0.01) * 100))
+            if not sys.stdout.isatty():
+                print(f"       {dest.name}: {render_bar(pct, 20)} {pct}% "
+                      f"({have:.1f}/{m['disk_gb']} GB)", flush=True)
+            still = still + 1 if have <= last + 0.001 else 0
+            last = max(last, have)
+            if still >= 9:  # ~3 min without a single new megabyte
+                warn(f"{dest.name}: transfer stalled - restarting it "
+                     "(resume loses nothing)")
+                proc.kill()
+                proc.wait()
+                return False
+        return proc.returncode == 0
+
+    try:
+        import hf_transfer  # noqa: F401,F811
+        ht_available = True
+    except ImportError:
+        ht_available = False
+
     wanted.sort(key=lambda x: x[1]["disk_gb"])  # small models first:
     # side servers + vision come online while the big coder downloads
     failed = []
     for i, (mid, m) in enumerate(wanted, 1):
         info(f"[{i}/{len(wanted)}] {mid}  ({m['repo']}, ~{m['disk_gb']} GB)")
-        stop = None
-        if not sys.stdout.isatty():  # background runs: periodic progress
-            import threading
-            stop = threading.Event()
-
-            def report(mid=mid, exp=m["disk_gb"], stop=stop):
-                while not stop.wait(20):
-                    have = _dir_gb(MODELS / mid)
-                    pct = min(100, int(have / max(exp, 0.01) * 100))
-                    print(f"       {mid}: {render_bar(pct, 20)} {pct}% "
-                          f"({have:.1f}/{exp} GB)", flush=True)
-            threading.Thread(target=report, daemon=True).start()
-        try:
-            snapshot_download(repo_id=m["repo"], allow_patterns=m["include"],
-                              local_dir=str(MODELS / mid))
+        eps = [hf_endpoint()] + [e for e in hf_mirrors()
+                                 if e != hf_endpoint()]
+        done = False
+        for attempt in range(1, 6):
+            use_ht = ht_available and attempt == 1
+            ep = eps[((attempt - 1) // 2) % len(eps)]  # rotate mirrors
+            if attempt > 1:
+                info(f"       attempt {attempt}/5 via {ep} "
+                     f"({'accelerated' if use_ht else 'steady mode'}) ...")
+                time.sleep(10)
+            if _attempt(m, MODELS / mid, use_ht, ep):
+                done = True
+                break
+        if done:
             ok(f"{mid} complete")
-        except Exception as e:
-            fail(f"{mid}: {e}")
+        else:
+            fail(f"{mid}: gave up after 5 attempts - re-run `lai models` "
+                 "later, it resumes")
             failed.append(mid)
-        finally:
-            if stop:
-                stop.set()
     if failed:
         warn(f"failed: {', '.join(failed)} - repo may have moved; update its "
              f"entry in {CATALOG_PATH.name} and re-run (downloads resume)")
@@ -1969,3 +2008,33 @@ def cmd_selftest(args):
     if r.returncode != 0:
         die("selftest FAILED")
     ok("all tests passed")
+
+
+def cmd_mirror(args):
+    """Pick the fastest Hugging Face mirror for model downloads."""
+    if getattr(args, "set_url", None):
+        s = load_json(STATE / "settings.json") or {}
+        s["hf_endpoint"] = args.set_url.rstrip("/")
+        save_text(STATE / "settings.json", json.dumps(s, indent=2))
+        ok(f"downloads will use {args.set_url}")
+        return
+    info("measuring real download speed from each mirror (~2 MB each)...")
+    results = []
+    for ep in hf_mirrors():
+        speed = mirror_speed(ep)
+        mark = " (current)" if ep == hf_endpoint() else ""
+        (ok if speed > 0 else fail)(f"{ep:<28} {speed:6.2f} MB/s{mark}")
+        results.append((speed, ep))
+    results.sort(reverse=True)
+    best_speed, best = results[0]
+    if best_speed <= 0:
+        die("no mirror is reachable - check your connection")
+    if best == hf_endpoint():
+        ok(f"already using the fastest mirror: {best}")
+        return
+    if confirm(f"switch downloads to {best} ({best_speed} MB/s)?"):
+        s = load_json(STATE / "settings.json") or {}
+        s["hf_endpoint"] = best
+        save_text(STATE / "settings.json", json.dumps(s, indent=2))
+        ok(f"downloads now use {best} - restart any running download "
+           "to apply")

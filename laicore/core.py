@@ -847,3 +847,37 @@ def llm_chat(prompt, system=None, max_tokens=2048, temperature=0.2,
                    "max_tokens": max_tokens, "temperature": temperature},
                   timeout=900, headers=auth_headers())
     return r["choices"][0]["message"].get("content") or ""
+
+
+def hf_mirrors():
+    cat = load_json(CATALOG_PATH) or {}
+    return cat.get("hf_mirrors") or ["https://huggingface.co"]
+
+
+def hf_endpoint():
+    """The mirror downloads use: user-tested choice, else the default."""
+    s = load_json(STATE / "settings.json") or {}
+    return s.get("hf_endpoint") or hf_mirrors()[0]
+
+
+def mirror_speed(endpoint, mb=2):
+    """Measure real download throughput from a mirror (MB/s, or 0)."""
+    url = (f"{endpoint}/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/"
+           "Qwen3-Embedding-0.6B-Q8_0.gguf")
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "lai", "Range": f"bytes=0-{mb * 1048576 - 1}"})
+    t0 = time.time()
+    got = 0
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            while got < mb * 1048576:
+                chunk = r.read(262144)
+                if not chunk:
+                    break
+                got += len(chunk)
+                if time.time() - t0 > 25:
+                    break
+    except Exception:
+        return 0.0
+    dt = max(time.time() - t0, 0.01)
+    return round(got / 1048576 / dt, 2)

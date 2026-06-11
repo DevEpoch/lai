@@ -1,38 +1,59 @@
 {
   "name": "local-ai-env",
   "displayName": "Local AI Env (lai)",
-  "description": "Control your local AI programming environment from VS Code: dashboard panel, stack, gate, AI review, chat, benchmarks.",
-  "version": "0.2.0",
+  "description": "Your local AI inside VS Code: a Claude-Code-style chat sidebar on your own models, plus dashboard, stack control, gate, AI review, and benchmarks. 100% local.",
+  "version": "0.3.0",
   "publisher": "local-ai-env",
   "license": "MIT",
   "repository": { "type": "git", "url": "https://github.com/DevEpoch/lai" },
   "engines": { "vscode": "^1.85.0" },
-  "categories": ["Other"],
+  "categories": ["AI", "Chat", "Other"],
   "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "scripts": {
-    "build": "tsc -p ."
+    "build": "tsc -p .",
+    "test": "vitest run",
+    "package": "vsce package --allow-missing-repository"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
-    "typescript": "^5.4.0"
+    "@vscode/vsce": "^2.26.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
   },
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "lai", "title": "lai", "icon": "$(circuit-board)" }
+      ]
+    },
+    "views": {
+      "lai": [
+        { "type": "webview", "id": "lai.chatView", "name": "Local AI Chat" }
+      ]
+    },
     "commands": [
-      { "command": "lai.panel",     "title": "lai: Dashboard Panel (inside VS Code)" },
-      { "command": "lai.dashboard", "title": "lai: Open Dashboard (browser)" },
-      { "command": "lai.start",     "title": "lai: Start Stack" },
-      { "command": "lai.stop",      "title": "lai: Stop Stack" },
-      { "command": "lai.status",    "title": "lai: Status" },
-      { "command": "lai.gate",      "title": "lai: Gate Current Project" },
-      { "command": "lai.review",    "title": "lai: AI Review My Changes" },
-      { "command": "lai.chat",      "title": "lai: Chat (terminal)" },
-      { "command": "lai.validate",  "title": "lai: Validate End-to-End" },
-      { "command": "lai.bench",     "title": "lai: Quality Benchmark" },
-      { "command": "lai.setup",     "title": "lai: Full Setup" },
-      { "command": "lai.menu",      "title": "lai: Menu" }
+      { "command": "lai.addSelection", "title": "lai: Add Selection to Chat" },
+      { "command": "lai.chatview",   "title": "lai: Open Chat Sidebar" },
+      { "command": "lai.panel",      "title": "lai: Dashboard Panel (inside VS Code)" },
+      { "command": "lai.dashboard",  "title": "lai: Open Dashboard (browser)" },
+      { "command": "lai.start",      "title": "lai: Start Stack" },
+      { "command": "lai.stop",       "title": "lai: Stop Stack" },
+      { "command": "lai.status",     "title": "lai: Status" },
+      { "command": "lai.gate",       "title": "lai: Gate Current Project" },
+      { "command": "lai.review",     "title": "lai: AI Review My Changes" },
+      { "command": "lai.chat",       "title": "lai: Chat (terminal)" },
+      { "command": "lai.validate",   "title": "lai: Validate End-to-End" },
+      { "command": "lai.bench",      "title": "lai: Quality Benchmark" },
+      { "command": "lai.setup",      "title": "lai: Full Setup" },
+      { "command": "lai.menu",       "title": "lai: Menu" }
     ],
+    "menus": {
+      "editor/context": [
+        { "command": "lai.addSelection", "group": "lai", "when": "editorHasSelection" }
+      ]
+    },
     "configuration": {
       "title": "Local AI Env",
       "properties": {

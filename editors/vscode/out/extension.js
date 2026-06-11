@@ -41,38 +41,33 @@ const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const os = __importStar(require("os"));
-function dashboardUrl() {
-    // respect a relocated UI port (lai ports set ui <n>)
-    const home = laiHome();
-    if (home) {
-        try {
-            const p = JSON.parse(fs.readFileSync(path.join(home, "state", "ports.json"), "utf-8"));
-            if (p.ui)
-                return `http://127.0.0.1:${p.ui}`;
-        }
-        catch { /* defaults below */ }
-    }
-    return "http://127.0.0.1:8090";
-}
+const lib_1 = require("./lib");
+const chat_1 = require("./chat");
 function laiHome() {
-    const candidates = [
+    return (0, lib_1.findLaiHome)([
         vscode.workspace.getConfiguration("lai").get("home"),
         process.env.LAI_HOME,
         ...(vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath),
         path.join(os.homedir(), "lai"),
         path.join(os.homedir(), "local-ai-env"),
         "D:\\vibe-coding",
-    ];
-    for (const c of candidates) {
-        if (c && fs.existsSync(path.join(c, "lai.py")))
-            return c;
+    ], { exists: p => fs.existsSync(p), read: p => fs.readFileSync(p, "utf-8") }, (...p) => path.join(...p));
+}
+function dashboardUrl() {
+    const home = laiHome();
+    let text = null;
+    try {
+        text = home
+            ? fs.readFileSync(path.join(home, "state", "ports.json"), "utf-8")
+            : null;
     }
-    return null;
+    catch { /* defaults */ }
+    return `http://127.0.0.1:${(0, lib_1.portFromStateJson)(text, "ui", 8090)}`;
 }
 function runInTerminal(args, cwd) {
     const home = laiHome();
     if (!home) {
-        void vscode.window.showErrorMessage("local-ai-env not found - set the 'lai.home' setting to the folder containing lai.py.");
+        void vscode.window.showErrorMessage("lai not found - set the 'lai.home' setting to the folder containing lai.py.");
         return;
     }
     const term = vscode.window.createTerminal({ name: "lai", cwd: cwd ?? home });
@@ -85,6 +80,7 @@ function projectDir() {
     return ws && ws.length ? ws[0].uri.fsPath : undefined;
 }
 const ACTIONS = [
+    { label: "$(comment-discussion) Chat Sidebar (local AI)", action: "chatview" },
     { label: "$(layout) Dashboard Panel (inside VS Code)", action: "panel" },
     { label: "$(dashboard) Open Dashboard (browser)", action: "dashboard" },
     { label: "$(play) Start Stack", action: "start" },
@@ -92,7 +88,7 @@ const ACTIONS = [
     { label: "$(pulse) Status", action: "status" },
     { label: "$(shield) Gate Current Project", action: "gate" },
     { label: "$(git-pull-request) AI Review My Changes", action: "review" },
-    { label: "$(comment-discussion) Chat", action: "chat" },
+    { label: "$(terminal) Chat (terminal)", action: "chat" },
     { label: "$(beaker) Validate End-to-End", action: "validate" },
     { label: "$(dashboard) Quality Benchmark", action: "bench" },
     { label: "$(tools) Full Setup", action: "setup" },
@@ -107,6 +103,9 @@ function openPanel() {
 }
 function run(action) {
     switch (action) {
+        case "chatview":
+            void vscode.commands.executeCommand("lai.chatView.focus");
+            break;
         case "panel":
             fetch(`${dashboardUrl()}/api/overview`)
                 .then(() => openPanel())
@@ -153,6 +152,9 @@ function run(action) {
     }
 }
 function activate(context) {
+    const chat = new chat_1.LaiChatProvider(laiHome);
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(chat_1.LaiChatProvider.viewId, chat, { webviewOptions: { retainContextWhenHidden: true } }));
+    context.subscriptions.push(vscode.commands.registerCommand("lai.addSelection", () => chat.addSelection()));
     for (const a of ACTIONS) {
         context.subscriptions.push(vscode.commands.registerCommand(`lai.${a.action}`, () => run(a.action)));
     }

@@ -35,6 +35,23 @@ jobs:
       - name: choices render
         run: python lai.py choices
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: dashboard tests (vitest)
+        working-directory: ui
+        run: |
+          npm install --no-audit --no-fund
+          npx vitest run
+
+      - name: extension tests + build (vitest + tsc)
+        working-directory: editors/vscode
+        run: |
+          npm install --no-audit --no-fund
+          npx tsc -p .
+          npx vitest run
+
       - name: shell wrapper syntax
         if: runner.os != 'Windows'
         run: bash -n lai.sh

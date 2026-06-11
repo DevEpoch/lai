@@ -60,6 +60,8 @@ Commands:
   cloud      add/remove OpenRouter/OpenAI/Anthropic keys - explicit-use
              fallbacks via or:/oa:/an: model prefixes; local stays default
   hftoken    store a free Hugging Face token (faster model downloads)
+  mirror     speed-test Hugging Face mirrors and use the fastest one;
+             downloads also rotate mirrors automatically between retries
   ports      show/set service ports; `ports check --fix` finds conflicts
              with other apps and moves lai to free ports (with approval)
   vscode     install the bundled VS Code companion extension
@@ -125,7 +127,7 @@ def main():
         "gate": cmd_gate, "skill": cmd_skill, "git": cmd_git,
         "connect": cmd_connect, "share": cmd_share, "tune": cmd_tune,
         "docs": cmd_docs, "chat": cmd_chat, "shortcut": cmd_shortcut,
-        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh, "selftest": cmd_selftest,
+        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh, "selftest": cmd_selftest, "mirror": cmd_mirror,
         "vscode": cmd_vscode,
     }
     for name in commands:
@@ -212,6 +214,9 @@ def main():
             sp.add_argument("value", nargs="?", default=None)
             sp.add_argument("--fix", action="store_true",
                             help="(check) move conflicting ports to free ones")
+        if name == "mirror":
+            sp.add_argument("--set", dest="set_url", default=None,
+                            help="use this endpoint without testing")
         if name == "hftoken":
             sp.add_argument("--key", default=None,
                             help="the hf_... token (prompted if omitted)")

@@ -201,6 +201,11 @@
     }
   },
 
+  "hf_mirrors": [
+    "https://huggingface.co",
+    "https://hf-mirror.com"
+  ],
+
   "discovery": {
     "_comment": "Used by `lai refresh`: finds GGUF models newer than this catalog. Tune freely.",
     "authors": ["unsloth", "Qwen", "bartowski", "google"],

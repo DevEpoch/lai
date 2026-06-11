@@ -6,7 +6,7 @@ import { ref, watchEffect } from "vue";
 export type Lang = "en" | "fa" | "ar";
 export const RTL_LANGS: Lang[] = ["fa", "ar"];
 
-const STRINGS: Record<Lang, Record<string, string>> = {
+export const STRINGS: Record<Lang, Record<string, string>> = {
   en: {
     "nav.home": "Home",
     "nav.overview": "Overview",
