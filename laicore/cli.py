@@ -67,6 +67,7 @@ Commands:
   vscode     install the bundled VS Code companion extension
   info       one-screen summary of the whole environment
   selftest   run the offline test suite (tests/)
+  doctor     one-shot diagnosis + a support zip (logs + state, no secrets)
 
 Anything that installs or downloads software asks for approval first;
 pass --yes (or -y) to approve automatically.
@@ -127,7 +128,7 @@ def main():
         "gate": cmd_gate, "skill": cmd_skill, "git": cmd_git,
         "connect": cmd_connect, "share": cmd_share, "tune": cmd_tune,
         "docs": cmd_docs, "chat": cmd_chat, "shortcut": cmd_shortcut,
-        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh, "selftest": cmd_selftest, "mirror": cmd_mirror,
+        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh, "selftest": cmd_selftest, "mirror": cmd_mirror, "doctor": cmd_doctor,
         "vscode": cmd_vscode,
     }
     for name in commands:

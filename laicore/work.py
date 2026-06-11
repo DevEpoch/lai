@@ -364,14 +364,26 @@ def cmd_docs(args):
     if re.match(r"https?://", src):
         status, raw = http_get(src, timeout=60)
         text = _html_to_text(raw.decode("utf-8", errors="replace"))
-    elif src.lower().endswith(".pdf"):
-        try:
-            from pypdf import PdfReader
+    elif src.lower().endswith((".pdf", ".docx", ".pptx")):
+        text = None
+        try:  # docling: layout/table-aware, handles office docs + scans
+            from docling.document_converter import DocumentConverter
+            info("parsing with docling (layout-aware)...")
+            text = (DocumentConverter().convert(src)
+                    .document.export_to_markdown())
         except ImportError:
-            die("PDF support needs pypdf - "
-                f"{sys.executable} -m pip install pypdf")
-        text = "\n\n".join(page.extract_text() or ""
-                           for page in PdfReader(src).pages)
+            pass
+        if text is None and src.lower().endswith(".pdf"):
+            try:
+                from pypdf import PdfReader
+            except ImportError:
+                die("PDF support needs pypdf (basic) or docling (best) - "
+                    f"{sys.executable} -m pip install pypdf")
+            text = "\n\n".join(page.extract_text() or ""
+                               for page in PdfReader(src).pages)
+        elif text is None:
+            die("docx/pptx parsing needs docling - "
+                f"{sys.executable} -m pip install docling")
     else:
         text = Path(src).read_text(encoding="utf-8", errors="replace")
     chunks = _chunk(text)

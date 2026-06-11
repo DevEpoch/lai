@@ -162,10 +162,41 @@ async function sendChat(): Promise<void> {
   chatInput.value = "";
   chatBusy.value = true;
   try {
-    const r = await post<{ reply: string }>("/api/chat", {
-      messages: chatMsgs.value.map(m => ({ role: m.role, content: m.content })).slice(-12),
+    const res = await fetch("/api/chat-stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: chatMsgs.value.map(m => ({ role: m.role, content: m.content })).slice(-12),
+      }),
     });
-    chatMsgs.value.push({ role: "assistant", content: r.reply });
+    if (!res.ok || !res.body) {
+      const err = await res.json().catch(() => ({}));
+      throw err;
+    }
+    const bubble: ChatMsg = { role: "assistant", content: "" };
+    chatMsgs.value.push(bubble);
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const t2 = line.trim();
+        if (!t2.startsWith("data:")) continue;
+        const data = t2.slice(5).trim();
+        if (data === "[DONE]") continue;
+        try {
+          const tok = (JSON.parse(data) as
+            { choices?: { delta?: { content?: string } }[] })
+            .choices?.[0]?.delta?.content;
+          if (tok) bubble.content += tok;
+        } catch { /* keep-alive line */ }
+      }
+    }
   } catch (e) {
     toast((e as { error?: string }).error ?? "chat failed", true);
   } finally {

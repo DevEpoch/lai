@@ -292,6 +292,33 @@ def cmd_ui(args):
                     started = start_job("setup", ["go", "--yes"],
                                         "setup-ui.log")
                     self._send({"ok": started})
+                elif u.path == "/api/chat-stream":
+                    payload = {"model": body.get("model", "coder"),
+                               "messages": body.get("messages", []),
+                               "stream": True, "max_tokens": 2048,
+                               "temperature": 0.4}
+                    hdrs = {"User-Agent": "lai",
+                            "Content-Type": "application/json"}
+                    hdrs.update(auth_headers())
+                    try:
+                        up = urllib.request.urlopen(urllib.request.Request(
+                            f"{endpoint_base()}/v1/chat/completions",
+                            data=json.dumps(payload).encode(),
+                            headers=hdrs), timeout=900)
+                    except Exception:
+                        self._send({"error": "Your AI is not ready yet - "
+                                    "check the Home screen progress."}, 503)
+                        return
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.send_header("Cache-Control", "no-cache")
+                    self.end_headers()
+                    try:
+                        for raw in up:  # byte-true SSE passthrough
+                            self.wfile.write(raw)
+                            self.wfile.flush()
+                    except (ConnectionError, OSError):
+                        pass
                 elif u.path == "/api/chat":
                     try:
                         r = http_json(

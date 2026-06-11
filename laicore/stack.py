@@ -322,13 +322,24 @@ def cmd_catalog(args):
     print()
     if getattr(args, "verify", False):
         info("verifying every catalog repo against the Hugging Face API...")
-        bad = 0
-        for mid, m in cat["models"].items():
+        from concurrent.futures import ThreadPoolExecutor
+
+        def _chk(item):
+            mid, m = item
             try:
                 http_get(f"https://huggingface.co/api/models/{m['repo']}",
                          timeout=15)
-                ok(f"{mid}: {m['repo']}")
+                return mid, m, None
             except Exception as e:
+                return mid, m, e
+
+        bad = 0
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(_chk, cat["models"].items()))
+        for mid, m, e in results:
+            if e is None:
+                ok(f"{mid}: {m['repo']}")
+            else:
                 code = getattr(e, "code", None)
                 if code in (401, 403):
                     warn(f"{mid}: {m['repo']} is gated or not public yet - "
@@ -2108,3 +2119,52 @@ def _native_fetch(m, dest, endpoint):
         part.replace(out)
         ok(f"       {Path(name).name} complete")
     return True
+
+
+def cmd_doctor(args):
+    """One-shot diagnosis + a support bundle (no secrets included)."""
+    lines = [f"lai {VERSION} | {SYSTEM} {platform.release()} | "
+             f"python {platform.python_version()}"]
+    hw = detect_hw(interactive=False)
+    lines.append(f"hw: {hw['vendor']} vram={hw['vram_gb']}GB "
+                 f"ram={hw['ram_gb']}GB cores={hw['cores']}")
+    ch = load_json(CHOICES_PATH)
+    lines.append("choices: " + (", ".join(
+        f"{r}={(e or {}).get('model', '-')}"
+        for r, e in ch["roles"].items()) if ch else "NONE - run lai plan"))
+    for n in DEFAULT_PORTS:
+        lines.append(f"port {n}: {P(n)} {_port_status(n, P(n))}")
+    for name, url in probes():
+        try:
+            http_get(url, timeout=2)
+            lines.append(f"service {name}: UP")
+        except Exception:
+            lines.append(f"service {name}: DOWN")
+    lines.append(f"engines: {load_json(VERSIONS_PATH, {})}")
+    lines.append(f"disk free: "
+                 f"{shutil.disk_usage(ROOT).free / 2**30:.0f} GB")
+    dl = RUN / "download.pid"
+    lines.append(f"download: pid={dl.read_text().strip() if dl.exists() else '-'} "
+                 f"alive={pid_alive(dl.read_text().strip()) if dl.exists() else False}")
+    report = "\n".join(lines)
+    print()
+    print(report)
+    import zipfile
+    out = RUN / f"doctor-{datetime.now():%Y%m%d-%H%M%S}.zip"
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("report.txt", report)
+        for lg in LOGS.glob("*.log"):
+            try:
+                z.writestr(f"logs/{lg.name}",
+                           lg.read_text(encoding="utf-8",
+                                        errors="replace")[-100_000:])
+            except OSError:
+                pass
+        for sf in ("choices.json", "ports.json", "active.json",
+                   "updates.json"):  # never secrets.json
+            if (STATE / sf).exists():
+                z.writestr(f"state/{sf}",
+                           (STATE / sf).read_text(encoding="utf-8"))
+    print()
+    ok(f"support bundle (no secrets): {out}")
+    info("attach it to a GitHub issue - it answers the first ten questions")

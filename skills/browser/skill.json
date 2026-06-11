@@ -1,0 +1,3 @@
+{
+  "description": "Agent browser control via the official Playwright MCP: open the app, click through flows, verify the UI actually works (accessibility-tree based, local). Requires Node (npx)."
+}

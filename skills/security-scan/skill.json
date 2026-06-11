@@ -1,0 +1,3 @@
+{
+  "description": "Real static analysis on the agent's own changes via the Semgrep MCP: scan the diff, fix findings before done. Pairs with the `security` checklist skill. Requires uv (uvx)."
+}
