@@ -362,6 +362,36 @@ def cmd_ui(args):
                     started = start_job("setup", ["go", "--yes"],
                                         "setup-ui.log")
                     self._send({"ok": started})
+                elif u.path == "/api/agent":
+                    from .agent import run_agent
+                    try:
+                        root = _web_path(body.get("path") or str(Path.home()))
+                    except ValueError as e:
+                        self._send({"error": str(e)}, 400)
+                        return
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.send_header("Cache-Control", "no-cache")
+                    self.end_headers()
+                    try:
+                        for ev in run_agent(
+                                root, str(body.get("text") or ""),
+                                model=body.get("model") or "coder",
+                                history=body.get("history") or []):
+                            self.wfile.write(
+                                b"data: " + json.dumps(ev).encode()
+                                + b"\n\n")
+                            self.wfile.flush()
+                    except (ConnectionError, OSError):
+                        pass
+                    except Exception as e:
+                        try:
+                            self.wfile.write(
+                                b"data: " + json.dumps(
+                                    {"type": "error",
+                                     "text": str(e)}).encode() + b"\n\n")
+                        except OSError:
+                            pass
                 elif u.path == "/api/chat-stream":
                     payload = {"model": body.get("model", "coder"),
                                "messages": body.get("messages", []),

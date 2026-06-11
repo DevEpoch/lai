@@ -132,7 +132,7 @@ export class LaiChatProvider implements vscode.WebviewViewProvider {
     void ed.edit(b => b.insert(ed.selection.active, code));
   }
 
-  private endpoint(): { url: string; key: string | null } {
+  private endpoint(): { url: string; agent: string; key: string | null } {
     const home = this.laiHome();
     const readState = (f: string): string | null => {
       try {
@@ -141,8 +141,59 @@ export class LaiChatProvider implements vscode.WebviewViewProvider {
       } catch { return null; }
     };
     const port = portFromStateJson(readState("ports.json"), "swap", 8080);
+    const uiPort = portFromStateJson(readState("ports.json"), "ui", 8090);
     return { url: `http://127.0.0.1:${port}/v1/chat/completions`,
+             agent: `http://127.0.0.1:${uiPort}/api/agent`,
              key: apiKeyFromSecrets(readState("secrets.json")) };
+  }
+
+  /** Claude-Code-style path: the lai agent loop (skills auto-matched,
+   *  tools used when the model needs them) against the open workspace. */
+  private async sendAgent(ws: string, text: string, model: string,
+                          post: (m: unknown) => void): Promise<void> {
+    const { agent, key } = this.endpoint();
+    let reply = "";
+    try {
+      const res = await fetch(agent, {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+          ...(key ? { Authorization: `Bearer ${key}` } : {}) },
+        body: JSON.stringify({ text, path: ws, model,
+          history: this.msgs.slice(0, -1) }),
+      });
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          let ev: { type: string; name?: string; text?: string;
+                    args?: unknown };
+          try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+          if (ev.type === "skill") post({ type: "note",
+            text: `* skill: ${ev.name}` });
+          if (ev.type === "tool") post({ type: "note",
+            text: `> ${ev.name} ${JSON.stringify(ev.args ?? {})
+              .slice(0, 100)}` });
+          if (ev.type === "text" && ev.text) {
+            reply += ev.text + "\n";
+            post({ type: "delta", text: ev.text + "\n" });
+          }
+          if (ev.type === "error") throw new Error(ev.text);
+        }
+      }
+      this.msgs.push({ role: "assistant", content: reply });
+      post({ type: "end", code: lastCodeBlock(reply) });
+    } catch {
+      post({ type: "error", text:
+        "lai agent not reachable - run `lai ui` + `lai start` first." });
+    }
   }
 
   private async send(text: string, model = "auto"): Promise<void> {
@@ -157,6 +208,8 @@ export class LaiChatProvider implements vscode.WebviewViewProvider {
     post({ type: "user",
            text: ctxLabels ? `[+] ${ctxLabels}\n${text}` : text });
     post({ type: "begin", model: role });
+    const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (ws) { await this.sendAgent(ws, content, role, post); return; }
     const { url, key } = this.endpoint();
     let reply = "";
     try {
@@ -213,6 +266,7 @@ const HTML = /* html */ `<!DOCTYPE html><html><head><style>
   .a { align-self: flex-start; background: var(--vscode-editorWidget-background);
     border: 1px solid var(--vscode-widget-border, transparent); }
   .err { color: var(--vscode-errorForeground); }
+  .t { opacity: .65; font-size: 11px; padding: 2px 10px; }
   #ctx { font-size: 11px; opacity: .7; min-height: 14px; }
   #bar { display: flex; gap: 6px; }
   textarea { flex: 1; resize: none; height: 52px;
@@ -285,6 +339,7 @@ Nothing leaves this machine.</div></div>
     if (m.type === "end") {
       document.getElementById("ctx").textContent = "";
       lastCode = m.code; ins.disabled = !m.code; cur = null; }
+    if (m.type === "note") add("a t", m.text);
     if (m.type === "error") { add("a err", m.text); cur = null; }
   });
 </script></body></html>`;

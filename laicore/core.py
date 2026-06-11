@@ -17,7 +17,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-VERSION = "0.13.0"
+VERSION = "0.14.0"
 
 SYSTEM = platform.system()
 
@@ -219,10 +219,10 @@ def http_get(url, timeout=5):
 def render_bar(pct, width=26):
     full, empty = ("#", "-")
     try:
-        "?".encode(sys.stdout.encoding or "utf-8")
-        full, empty = "?", "?"
+        "█░".encode(sys.stdout.encoding or "utf-8")
+        full, empty = "█", "░"
     except (UnicodeEncodeError, LookupError):
-        pass
+        pass  # legacy console codepage -> plain ASCII bar, never '?'
     n = max(0, min(width, int(width * pct / 100)))
     return full * n + empty * (width - n)
 

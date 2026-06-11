@@ -5,6 +5,7 @@ from .stack import *  # noqa: F401,F403
 from .work import *  # noqa: F401,F403
 from .projects import *  # noqa: F401,F403
 from .webui import cmd_ui  # noqa: F401
+from .agent import cmd_agent  # noqa: F401
 
 import argparse
 
@@ -110,6 +111,59 @@ def cmd_info(args):
     print(c("90", "  team:    share on | connect <host> | gate | new | "
                   "skill add | apikey | cloud add\n"))
 
+LOGO = r"""
+  ██╗      █████╗  ██╗
+  ██║     ██╔══██╗ ██║
+  ██║     ███████║ ██║
+  ██║     ██╔══██║ ██║
+  ███████╗██║  ██║ ██║
+  ╚══════╝╚═╝  ╚═╝ ╚═╝"""
+
+
+def _interactive(parser, commands):
+    """`lai` with no arguments: a Claude-Code-style interactive session.
+    Type a question -> the agent answers (with skills + tools); type a
+    command name -> it runs; 'help' / 'exit' do what they say."""
+    import shlex
+    try:
+        LOGO.encode(sys.stdout.encoding or "utf-8")
+        print(c("6", LOGO))
+    except (UnicodeEncodeError, LookupError):
+        print("\n  lai")
+    print(c("2", f"  local AI programming environment v{VERSION} - "
+                 "everything stays on this machine"))
+    print(c("8", "  ask anything (agent mode) | or a command: status, "
+                 "start, go, plan, models, ui | help | exit"))
+    print()
+    from .agent import cmd_agent as _agent
+    while True:
+        try:
+            line = input("lai> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+        if not line:
+            continue
+        if line in ("exit", "quit", "q"):
+            return
+        if line in ("help", "?"):
+            parser.print_help()
+            continue
+        word = line.split()[0]
+        try:
+            if word in commands:
+                ns = parser.parse_args(shlex.split(line))
+                set_assume_yes(getattr(ns, "yes", False))
+                commands[word](ns)
+            else:
+                _agent(argparse.Namespace(question=[line], path=".",
+                                          model=None, yes=False))
+        except SystemExit:
+            pass
+        except KeyboardInterrupt:
+            print()
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="lai", description=DESCRIPTION,
@@ -134,7 +188,7 @@ def main():
         "docs": cmd_docs, "chat": cmd_chat, "shortcut": cmd_shortcut,
         "path": cmd_path,
         "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh, "selftest": cmd_selftest, "mirror": cmd_mirror, "doctor": cmd_doctor, "storage": cmd_storage,
-        "vscode": cmd_vscode,
+        "vscode": cmd_vscode, "agent": cmd_agent,
     }
     for name in commands:
         sp = sub.add_parser(name, parents=[common])
@@ -175,6 +229,15 @@ def main():
                             help="url/file (add) or query (search)")
             sp.add_argument("--project", default=".",
                             help="project dir -> per-project collection")
+        if name == "agent":
+            sp.add_argument("question", nargs="*",
+                            help='e.g. lai agent "find problems in this '
+                                 'project"')
+            sp.add_argument("--path", default=".",
+                            help="project folder (default: current)")
+            sp.add_argument("--model", default=None,
+                            help="model/role; or:/oa:/an: for cloud "
+                                 "(default: coder)")
         if name == "chat":
             sp.add_argument("--model", default=None,
                             help="model id; or:/oa:/an: prefixes go to "
@@ -300,8 +363,8 @@ def main():
                                  "cloud fallback for this run only")
     args = parser.parse_args()
     if not args.cmd:
-        parser.print_help()
-        sys.exit(1)
+        _interactive(parser, commands)
+        return
     set_assume_yes(getattr(args, "yes", False))
     ensure_dirs()
     try:

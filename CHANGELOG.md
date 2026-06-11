@@ -4,6 +4,23 @@ All notable changes to lai. Format: [Keep a Changelog](https://keepachangelog.co
 Rule: every `VERSION` bump in `laicore/core.py` adds an entry here - `lai update`
 shows users exactly these entries when offering an update.
 
+## [0.14.0] - 2026-06-12
+
+### Added
+- The lai agent (`lai agent "..."`, `/api/agent`, and the VS Code chat
+  when a folder is open): skills are matched to your request
+  automatically, and the model uses tools on its own when needed -
+  list/read/search/write files in the project and run the gate or
+  tests. Works with any local model (fenced tool blocks, no special
+  chat template). Review a whole project, ask for docs, find problems.
+- `lai` with no arguments opens a Claude-Code-style interactive
+  session: logo, then type questions (agent mode) or commands.
+
+### Fixed
+- Progress bars showed `????` on consoles with legacy codepages: the
+  bar characters in the source had been corrupted to literal `?`.
+  Restored real block characters with a clean ASCII fallback.
+
 ## [0.13.0] - 2026-06-11
 
 ### Changed
