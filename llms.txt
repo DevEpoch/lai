@@ -1,0 +1,42 @@
+# lai - the local AI programming environment
+
+> lai plans, installs, and runs the best fully-local AI coding stack for the
+> machine it is on (Windows / Linux / macOS; NVIDIA, AMD, Apple Silicon, or
+> CPU-only). One stdlib-only Python package orchestrates llama.cpp +
+> llama-swap, coding agents (Roo Code, Continue, Aider, OpenHands), repo RAG
+> (Qdrant), a Vue dashboard, project scaffolding with a per-machine "gate",
+> and optional explicit-use cloud fallbacks. All knowledge lives in an
+> editable JSON catalog; everything that installs or downloads asks approval.
+
+Key facts: entry point `lai.py` (CLI: `lai <command>`); implementation in
+`laicore/` (core, stack, work, projects, webui, cli); recommendations in
+`config/catalog.json` (models, hardware tiers, use cases, project stacks);
+machine state in `state/` (gitignored); dashboard at http://127.0.0.1:8090;
+OpenAI-compatible model endpoint at http://localhost:8083/v1 (configurable,
+default 8080) serving models named `coder`, `thinker`, `vision`.
+
+## Docs
+
+- [LLM reference (read this first)](docs/llm-reference.md): complete
+  machine-oriented reference - every command, file contract, HTTP API,
+  concepts, and tutorial-ready workflows
+- [README](README.md): human overview and quick start
+- [Architecture & data flow](docs/01-architecture.md): design rules, winners
+- [Model stack & memory budgets](docs/02-models.md): per-tier model choices,
+  swap-cost policy
+- [Agents & IDE setup](docs/03-agents-ide.md): Roo Code, Continue, Aider,
+  OpenHands, Open WebUI configuration
+- [Troubleshooting](docs/05-troubleshooting.md): OOM, slow generation,
+  tool-call and indexing issues
+- [Hardware catalog research](docs/06-hardware-catalog.md): why each tier
+  recommends what it does, with sources
+- [Projects & team workflow](docs/07-projects.md): lai new, .lai/ contract,
+  lai gate, team vs personal config
+- [Skills, web research, git AI](docs/08-skills-research-git.md)
+- [Team server, tuning, docs RAG](docs/09-team-tune-docsrag.md)
+- [Cloud fallback policy](docs/10-cloud-fallback.md)
+
+## Optional
+
+- [Contributing](CONTRIBUTING.md): logic-in-package / knowledge-in-data rule
+- [VS Code extension](editors/vscode/README.md)

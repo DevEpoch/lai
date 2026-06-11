@@ -210,6 +210,9 @@ def main():
         if name == "ui":
             sp.add_argument("--port", type=int, default=None,
                             help="UI port (default 8090, localhost only)")
+            sp.add_argument("--no-browser", action="store_true",
+                            dest="no_browser",
+                            help="serve without opening a browser")
         if name == "new":
             sp.add_argument("--stack", default=None,
                             help="stack id (see `lai catalog` stacks)")

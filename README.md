@@ -59,13 +59,12 @@ Requires Python 3.9+. Commands are shown as `lai <cmd>`:
 lai check       # hardware + prerequisites report (with per-OS install hints)
 lai setup       # plan (pick your use case, review choices) -> engines -> models -> config -> IDE
 lai docker      # Qdrant + OpenHands + Open WebUI (Docker must be running)
-lai start       # start the inference stack
+lai start       # start the inference stack + the dashboard (http://127.0.0.1:8090)
 lai validate    # end-to-end smoke tests (chat, tool calls, autocomplete, RAG)
 lai bench       # tokens/sec vs your tier's targets; --quality runs a task-solving suite
 ```
 
-Or do everything from the browser - `lai ui` opens the dashboard at
-`http://127.0.0.1:8090` (also behind the **Local AI Env** desktop/app-menu shortcut
+The dashboard (Vue 3 + TypeScript) starts with the stack at `http://127.0.0.1:8090` (also behind the **Local AI Env** desktop/app-menu shortcut
 that the installer creates, or `lai shortcut` anytime):
 
 ```text
@@ -215,6 +214,17 @@ tools/ models/ logs/ run/ benchmarks/   runtime artifacts                  (giti
 8. [Skills, web research, prompt enhancement, git AI](docs/08-skills-research-git.md)
 9. [Team server, auto-tuning, docs RAG, updates](docs/09-team-tune-docsrag.md)
 10. [Cloud fallback - optional, explicit, minimal](docs/10-cloud-fallback.md)
+11. [LLM reference - complete machine-oriented surface](docs/llm-reference.md)
+
+## For LLMs and AI agents
+
+This repo ships [llms.txt](llms.txt) (llmstxt.org convention) and
+[docs/llm-reference.md](docs/llm-reference.md) - a complete, factual reference
+of every command, file contract, and HTTP API, plus canonical workflows and a
+"things tutorials get wrong" list. Point any model at those two files and it
+can accurately explain lai, build tutorials, or integrate against the local
+endpoint. The repo also has its own [AGENTS.md](AGENTS.md) for coding agents
+working on lai itself.
 
 ## Contributing
 

@@ -317,13 +317,25 @@ def cmd_ui(args):
                             "failed - see the lai ui console"}, 500)
 
     addr = ("127.0.0.1", args.port or P("ui"))
-    server = http.server.ThreadingHTTPServer(addr, Handler)
+    try:
+        server = http.server.ThreadingHTTPServer(addr, Handler)
+    except OSError:
+        try:
+            http_get(f"http://{addr[0]}:{addr[1]}/api/overview", timeout=2)
+            ok(f"dashboard already running at http://{addr[0]}:{addr[1]}")
+            if not getattr(args, "no_browser", False):
+                webbrowser.open(f"http://{addr[0]}:{addr[1]}")
+            return
+        except Exception:
+            die(f"port {addr[1]} is taken by another app -> "
+                "lai ports set ui <free port>")
     url = f"http://{addr[0]}:{addr[1]}"
     ok(f"UI running at {url}  (Ctrl+C to stop; localhost only)")
-    try:
-        webbrowser.open(url)
-    except Exception:
-        pass
+    if not getattr(args, "no_browser", False):
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
     try:
         server.serve_forever()
     except KeyboardInterrupt:

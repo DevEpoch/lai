@@ -500,6 +500,8 @@ def cmd_models(args):
         return sum(f.stat().st_size for f in Path(p).rglob("*")
                    if f.is_file()) / 2 ** 30 if Path(p).exists() else 0.0
 
+    wanted.sort(key=lambda x: x[1]["disk_gb"])  # small models first:
+    # side servers + vision come online while the big coder downloads
     failed = []
     for i, (mid, m) in enumerate(wanted, 1):
         info(f"[{i}/{len(wanted)}] {mid}  ({m['repo']}, ~{m['disk_gb']} GB)")
@@ -756,6 +758,13 @@ def cmd_start(args):
         pids[s["name"]] = _spawn(s["name"], [server] + s["args"], s.get("cuda"))
     pids["llama-swap"] = _spawn(
         "llama-swap", [swap, "--config", yaml_path, "--listen", f":{P('swap')}"])
+    try:  # the dashboard is part of the stack - a real program has its UI up
+        http_get(f"http://127.0.0.1:{P('ui')}/api/overview", timeout=1.5)
+        info(f"dashboard already running: http://127.0.0.1:{P('ui')}")
+    except Exception:
+        pids["ui"] = _spawn("ui", [sys.executable, str(ROOT / "lai.py"),
+                                   "ui", "--no-browser"])
+        info(f"dashboard: http://127.0.0.1:{P('ui')}")
     save_text(RUN / "pids.json", json.dumps(pids, indent=2))
     time.sleep(3)
     cmd_status(args)
