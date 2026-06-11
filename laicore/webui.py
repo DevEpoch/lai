@@ -55,9 +55,14 @@ def cmd_ui(args):
         if job_running(name):
             return False
         log = open(LOGS / logname, "ab")
-        jobs[name] = subprocess.Popen(
-            [sys.executable, str(ROOT / "lai.py")] + cli,
-            stdout=log, stderr=subprocess.STDOUT, cwd=str(ROOT))
+        try:
+            jobs[name] = subprocess.Popen(
+                [sys.executable, str(ROOT / "lai.py")] + cli,
+                stdout=log, stderr=subprocess.STDOUT, cwd=str(ROOT))
+        except Exception:
+            log.close()
+            raise
+        log.close()
         return True
 
     def dir_size_gb(path):
