@@ -103,6 +103,11 @@ class TestDashboardApi(unittest.TestCase):
         for path, payload, want in (
                 ("/api/nope", None, 404),
                 ("/api/logs?name=../../etc/passwd", None, 400),
+                ("/api/logs?name=..%2f..%2fetc%2fpasswd", None, 400),
+                ("/api/logs?name=..%252f..%252fetc%252fpasswd", None, 400),
+                ("/api/logs?name=..\\..\\windows\\win.ini", None, 400),
+                ("/api/logs?name=../../etc/passwd%00.log", None, 400),
+                ("/api/logs?name=..%E2%88%95..%E2%88%95etc%E2%88%95passwd", None, 400),
                 ("/api/set", {"role": "nope", "model": "x"}, 400),
                 ("/api/new", {"stack": "nope", "path": "X:/nope"}, 400),
                 ("/api/gate", {"path": str(ROOT / "nope")}, 400)):
