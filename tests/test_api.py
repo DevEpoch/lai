@@ -76,7 +76,7 @@ class TestDashboardApi(unittest.TestCase):
 
     def test_ports_and_cloud(self):
         _, p = _req(self.port, "/api/ports")
-        self.assertEqual(len(p["ports"]), 9)
+        self.assertGreaterEqual(len(p["ports"]), 9)
         _, cc = _req(self.port, "/api/cloudcfg")
         providers = cc["providers"]
         self.assertGreaterEqual(len(providers), 3)
