@@ -461,6 +461,17 @@ def cmd_models(args):
     if not wanted:
         ok("all chosen models already downloaded")
         return
+    marker = RUN / "download.pid"
+    if marker.exists():
+        try:
+            other = int(marker.read_text().strip())
+        except ValueError:
+            other = None
+        if other and other != os.getpid() and pid_alive(other):
+            die(f"a download is already running (pid {other}) - one at a "
+                "time keeps Hugging Face file locks happy; watch progress "
+                "in the dashboard")
+    marker.write_text(str(os.getpid()), encoding="utf-8")
     total = sum(m["disk_gb"] for _, m in wanted)
     info("to download: " + ", ".join(f"{mid} ({m['disk_gb']} GB)"
                                      for mid, m in wanted))
@@ -742,10 +753,18 @@ def _spawn(name, cmd, cuda=None):
 
 def cmd_start(args):
     ensure_dirs()
-    if load_json(RUN / "pids.json"):
-        warn("pids.json exists - run `lai stop` first (or delete run/pids.json "
-             "if nothing is actually running)")
-        return
+    old = load_json(RUN / "pids.json")
+    if old:
+        try:
+            http_get(f"http://localhost:{P('swap')}/v1/models", timeout=2)
+            info("stack already running - use `lai restart` to bounce it")
+            return
+        except Exception:
+            info("previous run is stale/partially dead - cleaning up first")
+            for name, pid in old.items():
+                if pid_alive(pid):
+                    _kill(pid)
+            (RUN / "pids.json").unlink(missing_ok=True)
     server = find_tool("llama-server")
     swap = find_tool("llama-swap")
     yaml_path = GEN_YAML

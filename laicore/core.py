@@ -109,6 +109,27 @@ def port_free(port):
         s.close()
 
 
+def pid_alive(pid):
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if IS_WIN:
+        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+        if not h:
+            return False
+        code = ctypes.c_ulong()
+        okq = ctypes.windll.kernel32.GetExitCodeProcess(h,
+                                                        ctypes.byref(code))
+        ctypes.windll.kernel32.CloseHandle(h)
+        return bool(okq) and code.value == 259  # STILL_ACTIVE
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
 def next_free_port(start):
     p = int(start) + 1
     taken = set(ports().values())

@@ -4,7 +4,7 @@ from .core import *  # noqa: F401,F403
 from .stack import *  # noqa: F401,F403
 from .work import *  # noqa: F401,F403
 from .projects import *  # noqa: F401,F403
-from .stack import _port_status  # noqa: F401  (underscore: not star-exported)
+from .stack import _kill, _port_status  # noqa: F401  (underscores: not star-exported)
 
 def cmd_ui(args):
     import http.server
@@ -62,12 +62,19 @@ def cmd_ui(args):
             "skills": {k: v.get("description", "")
                        for k, v in list_skills().items()},
             "versions": load_json(VERSIONS_PATH, {}),
-            "running": {"download": job_running("download"),
+            "running": {"download": download_running(),
                         "bench": job_running("bench"),
                         "setup": job_running("setup")},
             "last_quality": last_q,
             "logs": sorted(f.name[:-4] for f in LOGS.glob("*.log")),
         }
+
+    def download_running():
+        try:
+            mp = int((RUN / "download.pid").read_text().strip())
+        except (OSError, ValueError):
+            mp = None
+        return job_running("download") or pid_alive(mp)
 
     def downloads_state():
         cat = load_json(CATALOG_PATH, {})
@@ -79,7 +86,7 @@ def cmd_ui(args):
                 items.append({"id": mid, "expected_gb": m["disk_gb"],
                               "have_gb": round(dir_size_gb(MODELS / mid), 2),
                               "done": bool(model_file(mid))})
-        return {"running": job_running("download"), "items": items}
+        return {"running": download_running(), "items": items}
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, fmt, *a):  # silence per-request console spam
@@ -207,15 +214,40 @@ def cmd_ui(args):
                 elif u.path == "/api/config":
                     cmd_config(ns)
                     self._send({"ok": True})
-                elif u.path in ("/api/start", "/api/stop", "/api/restart"):
-                    {"/api/start": cmd_start, "/api/stop": cmd_stop,
+                elif u.path == "/api/start":
+                    try:
+                        http_get(f"http://localhost:{P('swap')}/v1/models",
+                                 timeout=2)
+                        self._send({"error": "already running - use "
+                                    "Restart to bounce the stack"}, 409)
+                        return
+                    except Exception:
+                        pass
+                    cmd_start(ns)
+                    self._send({"ok": True})
+                elif u.path in ("/api/stop", "/api/restart"):
+                    {"/api/stop": cmd_stop,
                      "/api/restart": cmd_restart}[u.path](ns)
                     self._send({"ok": True})
                 elif u.path == "/api/download":
+                    if body.get("action") != "pause" \
+                            and downloads_state()["running"]:
+                        self._send({"error": "a download is already "
+                                    "running - the bars below are live"},
+                                   409)
+                        return
                     if body.get("action") == "pause":
                         p = jobs.get("download")
                         if p and p.poll() is None:
                             p.terminate()
+                        try:  # also stop a CLI-started download
+                            mp = int((RUN / "download.pid")
+                                     .read_text().strip())
+                            if pid_alive(mp):
+                                _kill(mp)
+                        except (OSError, ValueError):
+                            pass
+                        (RUN / "download.pid").unlink(missing_ok=True)
                         self._send({"ok": True})
                     else:
                         started = start_job("download", ["models", "--yes"],
