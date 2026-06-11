@@ -2,7 +2,7 @@
     "name":  "local-ai-env",
     "displayName":  "Local AI Env (lai)",
     "description":  "Your local AI inside VS Code: a Claude-Code-style chat sidebar on your own models, plus dashboard, stack control, gate, AI review, and benchmarks. 100% local.",
-    "version":  "0.4.0",
+    "version":  "0.5.0",
     "publisher":  "local-ai-env",
     "license":  "MIT",
     "repository":  {
