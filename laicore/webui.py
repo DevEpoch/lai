@@ -140,16 +140,21 @@ def cmd_ui(args):
                     self._send(ui_file.read_bytes(),
                                ctype="text/html; charset=utf-8")
                 elif u.path.startswith("/assets/"):
-                    base = os.path.realpath(str(dist))
-                    f = os.path.realpath(
-                        str(dist / u.path.lstrip("/")))
-                    if f.startswith(base + os.sep) and os.path.isfile(f):
+                    base_path = Path(dist).resolve()
+                    rel = u.path[len("/assets/"):].lstrip("/")
+                    target_path = (base_path / rel).resolve()
+                    try:
+                        target_path.relative_to(base_path)
+                        in_assets = True
+                    except ValueError:
+                        in_assets = False
+                    if in_assets and target_path.is_file():
                         ctypes_map = {".js": "application/javascript",
                                       ".css": "text/css",
                                       ".svg": "image/svg+xml",
                                       ".woff2": "font/woff2"}
-                        self._send(Path(f).read_bytes(),
-                                   ctype=ctypes_map.get(Path(f).suffix,
+                        self._send(target_path.read_bytes(),
+                                   ctype=ctypes_map.get(target_path.suffix,
                                                         "application/octet-stream"))
                     else:
                         self._send({"error": "not found"}, 404)
