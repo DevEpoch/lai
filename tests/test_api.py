@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 import unittest
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -48,9 +49,15 @@ class TestDashboardApi(unittest.TestCase):
             try:
                 _req(cls.port, "/api/overview")
                 return
-            except Exception:
+            except urllib.error.HTTPError as e:
+                raise AssertionError(
+                    f"ui server returned HTTP {e.code} during startup probe: {e.reason}"
+                ) from e
+            except urllib.error.URLError:
                 if cls.proc.poll() is not None:
                     break
+            except Exception as e:
+                raise AssertionError(f"unexpected startup probe failure: {e}") from e
             sleep_s = min(sleep_s * 2, 0.5)
         raise unittest.SkipTest("ui server failed to boot")
 
