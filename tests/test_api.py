@@ -62,9 +62,16 @@ class TestDashboardApi(unittest.TestCase):
     def test_overview_shape(self):
         status, o = _req(self.port, "/api/overview")
         self.assertEqual(status, 200)
+        self.assertIsInstance(o, dict)
         for key in ("usecases", "stacks", "skills", "running",
                     "lai_version", "models_meta"):
             self.assertIn(key, o)
+        self.assertIsInstance(o["usecases"], list)
+        self.assertIsInstance(o["stacks"], list)
+        self.assertIsInstance(o["skills"], list)
+        self.assertIsInstance(o["running"], dict)
+        self.assertIsInstance(o["lai_version"], str)
+        self.assertIsInstance(o["models_meta"], list)
         self.assertGreaterEqual(len(o["stacks"]), 15)
         self.assertGreaterEqual(len(o["skills"]), 9)
 
