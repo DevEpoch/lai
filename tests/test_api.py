@@ -73,12 +73,12 @@ class TestDashboardApi(unittest.TestCase):
         for key in ("usecases", "stacks", "skills", "running",
                     "lai_version", "models_meta"):
             self.assertIn(key, o)
-        self.assertIsInstance(o["usecases"], list)
-        self.assertIsInstance(o["stacks"], list)
-        self.assertIsInstance(o["skills"], list)
+        self.assertIsInstance(o["usecases"], dict)
+        self.assertIsInstance(o["stacks"], dict)
+        self.assertIsInstance(o["skills"], dict)
         self.assertIsInstance(o["running"], dict)
         self.assertIsInstance(o["lai_version"], str)
-        self.assertIsInstance(o["models_meta"], list)
+        self.assertIsInstance(o["models_meta"], dict)
         self.assertGreaterEqual(len(o["stacks"]), 15)
         self.assertGreaterEqual(len(o["skills"]), 9)
 
@@ -92,11 +92,8 @@ class TestDashboardApi(unittest.TestCase):
         _, p = _req(self.port, "/api/ports")
         self.assertGreaterEqual(len(p["ports"]), 9)
         _, cc = _req(self.port, "/api/cloudcfg")
-        providers = cc["providers"]
-        self.assertGreaterEqual(len(providers), 3)
-        self.assertIn("aws", providers)
-        self.assertIn("azure", providers)
-        self.assertIn("gcp", providers)
+        ids = {p["id"] for p in cc["providers"]}
+        self.assertEqual(ids, {"openrouter", "openai", "anthropic"})
 
     def test_downloads_and_projects(self):
         _, d = _req(self.port, "/api/downloads")

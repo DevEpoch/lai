@@ -63,7 +63,8 @@ anywhere: python lai.py <command> [--yes]
 | `autostart [--remove] / watchdog` | login service + auto-restart monitor |
 | `upgrade` | llama.cpp / llama-swap release check |
 | `vscode` | build (TypeScript) + install the VS Code companion extension |
-| `shortcut [--remove]` | Desktop / app-menu launcher |
+| `shortcut [--remove]` | Desktop / app-menu launcher (with icon) |
+| `path` | add `lai` to PATH (Windows user PATH; `~/.local/bin/lai` on Unix) |
 | `info` | one-screen summary of the whole environment |
 
 ## File & directory contract

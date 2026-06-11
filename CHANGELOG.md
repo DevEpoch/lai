@@ -4,6 +4,30 @@ All notable changes to lai. Format: [Keep a Changelog](https://keepachangelog.co
 Rule: every `VERSION` bump in `laicore/core.py` adds an entry here - `lai update`
 shows users exactly these entries when offering an update.
 
+## [0.12.0] - 2026-06-11
+
+### Added
+- `lai path`: puts `lai` on your PATH so it runs from any folder in any
+  terminal (Windows user PATH + change broadcast; `~/.local/bin/lai`
+  launcher and `.bashrc`/`.zshrc` on Linux/macOS). Installers run it
+  automatically.
+- `lai.cmd`: `lai` now works in plain cmd.exe too (cmd cannot execute
+  `.ps1` files - it was opening them in an editor).
+- Installers install missing prerequisites instead of just warning:
+  Python/Git via winget on Windows, apt/dnf/pacman/zypper/brew on
+  Linux/macOS; both end with a clear "open a new terminal, type
+  `lai go`, dashboard at `http://localhost:8090`" message.
+- `assets/icon.ico` + Desktop/Start-Menu shortcuts now carry the lai
+  icon; `lai vscode` derives its install folder from package.json.
+
+### Security
+- Dashboard API hardening: cross-origin POST guard (localhost-CSRF),
+  request paths confined to home/workspace/registered projects
+  (`workspace_roots` in `state/settings.json` extends the allowlist),
+  `secrets.json` written owner-only (0600), least-privilege CI workflow
+  permissions, strict skill-name validation. Documented in
+  docs/01-architecture.md "Security model".
+
 ## [0.11.0] - 2026-06-11
 
 ### Added

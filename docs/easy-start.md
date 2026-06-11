@@ -20,7 +20,8 @@ curl -fsSL https://raw.githubusercontent.com/DevEpoch/lai/main/install.sh | bash
 
 ## Step 2 - Say "go"
 
-In the same window, type:
+Close that window, open a NEW one (the install added the `lai` command -
+new windows know about it, old ones don't). Then type:
 
 ```text
 lai go
@@ -52,6 +53,12 @@ and nothing you type goes anywhere.
 - **Does it need internet?** Only for the first download. After that, no.
 - **Can it see what I type?** Only your computer can. Nothing is sent to any
   company.
+- **Where is the dashboard (the UI)?** Double-click the **Local AI Env**
+  icon on your Desktop, or type `lai ui`, or open
+  `http://localhost:8090` in your browser. All three are the same place.
+- **It says `lai` is not recognized?** Open a NEW terminal window (old
+  ones don't know new commands). Still not working? Type
+  `python lai.py path` inside the lai folder once, then open a new window.
 - **It says a port is busy?** Type `lai ports check --fix` and say yes - lai
   politely moves out of the way.
 - **Something looks stuck?** Type `lai info` to see what's going on, or

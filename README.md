@@ -64,8 +64,11 @@ Windows:    irm https://raw.githubusercontent.com/DevEpoch/lai/main/install.ps1 
 Linux/mac:  curl -fsSL https://raw.githubusercontent.com/DevEpoch/lai/main/install.sh | bash
 ```
 
-Requires Python 3.9+. Commands are shown as `lai <cmd>`:
-**Windows** `.\lai.ps1 <cmd>` ?? **Linux/macOS** `./lai.sh <cmd>` ?? anywhere `python lai.py <cmd>`.
+The installer puts Python/Git in place if they are missing (winget / apt / brew),
+adds `lai` to your PATH, and creates a Desktop / app-menu launcher. **Open a new
+terminal afterwards and `lai <cmd>` works from any folder** - in PowerShell,
+cmd.exe (via `lai.cmd`), bash, and zsh alike. Already installed without PATH?
+Run `lai path` once. From a clone you can always use `python lai.py <cmd>`.
 
 ```text
 lai check       # hardware + prerequisites report (with per-OS install hints)

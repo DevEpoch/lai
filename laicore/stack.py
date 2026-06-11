@@ -1485,6 +1485,55 @@ def cmd_tune(args):
     elif not best[1]:
         ok("current configuration is already the fastest")
 
+def cmd_path(args):
+    """Make `lai` runnable from any folder in any shell."""
+    if IS_WIN:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0,
+                            winreg.KEY_READ | winreg.KEY_WRITE) as k:
+            try:
+                cur, typ = winreg.QueryValueEx(k, "Path")
+            except FileNotFoundError:
+                cur, typ = "", winreg.REG_EXPAND_SZ
+            if str(ROOT).lower() in [p.strip().lower()
+                                     for p in cur.split(";") if p.strip()]:
+                ok(f"{ROOT} is already on your PATH")
+                return
+            if not confirm(f"add {ROOT} to your user PATH "
+                           "(so `lai` works in any terminal)?"):
+                return
+            winreg.SetValueEx(k, "Path", 0, typ or winreg.REG_EXPAND_SZ,
+                              (cur.rstrip(";") + ";" if cur else "")
+                              + str(ROOT))
+        try:  # tell running apps the environment changed
+            ctypes.windll.user32.SendMessageTimeoutW(
+                0xFFFF, 0x1A, 0, "Environment", 2, 5000, None)
+        except Exception:
+            pass
+        ok(f"added {ROOT} to your PATH")
+        info("open a NEW terminal, then `lai go` works anywhere "
+             "(cmd, PowerShell, and Windows Terminal)")
+    else:
+        bin_dir = Path.home() / ".local" / "bin"
+        launcher = bin_dir / "lai"
+        if not confirm(f"create the `lai` command at {launcher}?"):
+            return
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        save_text(launcher, "#!/bin/sh\n"
+                  f"exec '{sys.executable}' '{ROOT / 'lai.py'}' \"$@\"\n")
+        launcher.chmod(0o755)
+        ok(f"created {launcher}")
+        if str(bin_dir) not in os.environ.get("PATH", ""):
+            line = 'export PATH="$HOME/.local/bin:$PATH"'
+            for rc in (".bashrc", ".zshrc"):
+                rcp = Path.home() / rc
+                txt = rcp.read_text(encoding="utf-8") if rcp.exists() else ""
+                if line not in txt:
+                    with open(rcp, "a", encoding="utf-8") as f:
+                        f.write(f"\n# added by lai\n{line}\n")
+            info("PATH updated in .bashrc/.zshrc - open a new terminal, "
+                 "then `lai go` works anywhere")
+
 def cmd_shortcut(args):
     lai = ROOT / "lai.py"
     icon = ROOT / "assets" / "icon.svg"
@@ -1503,6 +1552,7 @@ def cmd_shortcut(args):
                f"  $s.TargetPath = '{py}'; "
                f"  $s.Arguments = '\"\"{lai}\"\" ui'; "
                f"  $s.WorkingDirectory = '{ROOT}'; "
+               f"  $s.IconLocation = '{ROOT / 'assets' / 'icon.ico'},0'; "
                f"  $s.Description = 'Local AI programming environment'; "
                f"  $s.Save(); ")
             + "} ")

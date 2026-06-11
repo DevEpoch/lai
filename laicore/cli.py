@@ -59,6 +59,7 @@ Commands:
   chat       streaming chat REPL in the terminal (@file attach, /model,
              /polish translates+sharpens non-English prompts first)
   shortcut   Desktop/app-menu launcher that opens the dashboard (--remove)
+  path       put `lai` on your PATH so it runs from any folder/terminal
   cloud      add/remove OpenRouter/OpenAI/Anthropic keys - explicit-use
              fallbacks via or:/oa:/an: model prefixes; local stays default
   hftoken    store a free Hugging Face token (faster model downloads)
@@ -131,6 +132,7 @@ def main():
         "gate": cmd_gate, "skill": cmd_skill, "git": cmd_git,
         "connect": cmd_connect, "share": cmd_share, "tune": cmd_tune,
         "docs": cmd_docs, "chat": cmd_chat, "shortcut": cmd_shortcut,
+        "path": cmd_path,
         "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh, "selftest": cmd_selftest, "mirror": cmd_mirror, "doctor": cmd_doctor, "storage": cmd_storage,
         "vscode": cmd_vscode,
     }

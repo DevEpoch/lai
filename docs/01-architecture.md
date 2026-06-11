@@ -84,3 +84,20 @@ POST http://localhost:8080/v1/chat/completions   { "model": "coder" | "thinker" 
 POST http://localhost:8081/v1/completions        autocomplete (FIM)
 POST http://localhost:8082/v1/embeddings         embeddings
 ```
+
+## Security model
+
+Everything binds to `127.0.0.1` (LAN exposure only via explicit `lai share`,
+which also turns on the `lai apikey` bearer token). On top of that:
+
+- **Cross-origin guard.** The dashboard API rejects POSTs whose `Origin`/`Host`
+  is not localhost. Without this, any website open in your browser could fire
+  state-changing requests at local daemons (classic localhost CSRF).
+- **Workspace confinement.** Paths arriving over the dashboard HTTP API
+  (`/api/new`, `/api/gate`, `/api/skill`) must resolve under your home folder,
+  a registered project's parent, or an entry in `workspace_roots` in
+  `state/settings.json`. The CLI is intentionally unconfined - a path typed in
+  your own terminal is your own decision, like `git clone <dir>`.
+- **Secrets.** `state/secrets.json` (API keys, HF token) is gitignored, never
+  shipped in `lai doctor` zips, and written with owner-only permissions (0600
+  on POSIX; the user-profile ACL covers it on Windows).

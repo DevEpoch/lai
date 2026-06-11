@@ -1,6 +1,22 @@
 # Troubleshooting
 
-`lai` = `.\lai.ps1` (Windows) or `./lai.sh` (Linux). Logs live in `logs/`.
+`lai` works from any terminal once installed (`lai path` adds it). Logs live in `logs/`.
+
+## `lai` is not recognized in the terminal
+
+The installer adds lai to your user PATH, but only NEW terminal windows
+see it. Open a fresh terminal first. If it still fails (e.g. you cloned
+manually), run `python lai.py path` once from the lai folder - it adds
+the folder to PATH on Windows and creates `~/.local/bin/lai` on
+Linux/macOS. In cmd.exe specifically, `lai` runs through `lai.cmd`;
+never invoke `lai.ps1` from cmd (cmd cannot execute PowerShell scripts
+and will open the file in an editor instead).
+
+## Where is the dashboard?
+
+`http://localhost:8090` (or your remapped `ui` port - `lai ports` shows
+it). Three equivalent ways in: the **Local AI Env** Desktop/app-menu
+shortcut, `lai ui`, or the URL in a browser. `lai start` also starts it.
 
 ## GPU out of memory (model fails to load or crashes mid-generation)
 
