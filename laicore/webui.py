@@ -35,8 +35,10 @@ def cmd_ui(args):
     def dir_size_gb(path):
         if not path.exists():
             return 0.0
-        return sum(f.stat().st_size for f in path.rglob("*")
-                   if f.is_file()) / 2 ** 30
+        return sum(
+            f.stat().st_size for f in path.rglob("*")
+            if f.is_file() and ".cache" not in f.parts
+            and not f.name.endswith(".incomplete")) / 2 ** 30
 
     def overview():
         cat = load_json(CATALOG_PATH, {})
@@ -83,9 +85,12 @@ def cmd_ui(args):
         if choices and cat:
             for mid, m in wanted_models(cat, choices,
                                         include_downloaded=True):
+                fin = bool(model_file(mid)) and (
+                    not m.get("mmproj") or bool(model_file(mid,
+                                                           mmproj=True)))
                 items.append({"id": mid, "expected_gb": m["disk_gb"],
                               "have_gb": round(dir_size_gb(MODELS / mid), 2),
-                              "done": bool(model_file(mid))})
+                              "done": fin})
         return {"running": download_running(), "items": items}
 
     class Handler(http.server.BaseHTTPRequestHandler):

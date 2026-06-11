@@ -472,6 +472,9 @@ def cmd_models(args):
                 "time keeps Hugging Face file locks happy; watch progress "
                 "in the dashboard")
     marker.write_text(str(os.getpid()), encoding="utf-8")
+    for lk in MODELS.rglob("*.lock"):  # stale locks from killed downloaders
+        lk.unlink(missing_ok=True)     # block hf_hub forever; we hold the
+    # cross-process mutex, so clearing them is safe here
     total = sum(m["disk_gb"] for _, m in wanted)
     info("to download: " + ", ".join(f"{mid} ({m['disk_gb']} GB)"
                                      for mid, m in wanted))
@@ -568,7 +571,9 @@ def cmd_models(args):
                 info(f"       attempt {attempt}/5 via {ep} "
                      f"({'accelerated' if use_ht else 'steady mode'}) ...")
                 time.sleep(10)
-            if _attempt(m, MODELS / mid, use_ht, ep):
+            won = (_native_fetch(m, MODELS / mid, ep) if attempt <= 3
+                   else _attempt(m, MODELS / mid, use_ht, ep))
+            if won:
                 done = True
                 break
         if done:
@@ -2038,3 +2043,68 @@ def cmd_mirror(args):
         save_text(STATE / "settings.json", json.dumps(s, indent=2))
         ok(f"downloads now use {best} - restart any running download "
            "to apply")
+
+
+def _native_fetch(m, dest, endpoint):
+    """Last-resort downloader: plain ranged HTTP, our own resume loop.
+    Survives the network conditions that wedge the hf client stack."""
+    tok = (load_json(SECRETS_PATH) or {}).get("hf_token")
+    auth = {"Authorization": f"Bearer {tok}"} if tok else {}
+    try:
+        tree = http_json(f"{endpoint}/api/models/{m['repo']}/tree/main",
+                         timeout=30, headers=auth)
+    except Exception:
+        return False
+    files = []
+    for f in tree:
+        if f.get("type") != "file":
+            continue
+        if any(fnmatch.fnmatch(Path(f["path"]).name.lower(), p.lower())
+               for p in m["include"]):
+            size = f.get("size") or (f.get("lfs") or {}).get("size") or 0
+            files.append((f["path"], size))
+    if not files:
+        return False
+    for name, size in files:
+        out = dest / name
+        if out.exists() and (not size or out.stat().st_size == size):
+            continue
+        part = Path(str(out) + ".part")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        url = f"{endpoint}/{m['repo']}/resolve/main/{name}"
+        pos = part.stat().st_size if part.exists() else 0
+        info(f"       native fetch: {Path(name).name} "
+             f"({size / 2**30:.2f} GB, resuming at {pos / 2**20:.0f} MB)")
+        idle = 0
+        with open(part, "ab") as fh:
+            while pos < size:
+                req = urllib.request.Request(url, headers={
+                    "User-Agent": "lai", "Range": f"bytes={pos}-", **auth})
+                before = pos
+                try:
+                    with urllib.request.urlopen(req, timeout=30) as r:
+                        while True:
+                            chunk = r.read(262144)
+                            if not chunk:
+                                break
+                            fh.write(chunk)
+                            pos += len(chunk)
+                            if pos // (200 * 2**20) != \
+                                    (pos - len(chunk)) // (200 * 2**20):
+                                pct = pos * 100 // max(size, 1)
+                                print(f"       {Path(name).name}: "
+                                      f"{render_bar(pct, 20)} {pct}% "
+                                      f"({pos / 2**30:.2f}/"
+                                      f"{size / 2**30:.2f} GB)", flush=True)
+                except Exception:
+                    pass  # drop -> reconnect with a fresh Range below
+                idle = idle + 1 if pos == before else 0
+                if idle >= 40:  # ~20 min of pure failure: let the
+                    return False  # ladder rotate to another mirror
+                if pos == before:
+                    time.sleep(min(30, 3 * idle))
+        if size and part.stat().st_size != size:
+            return False
+        part.replace(out)
+        ok(f"       {Path(name).name} complete")
+    return True
