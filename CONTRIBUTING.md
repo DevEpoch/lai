@@ -32,7 +32,8 @@ ecosystems without a generator.
 ## Checks before a PR
 
 ```bash
-python -m py_compile lai.py
+python -m compileall -q laicore lai.py
+python -m unittest discover -s tests
 python -c "import json,glob; [json.load(open(f)) for f in glob.glob('config/*.json')]"
 python lai.py plan --yes --use-case scripts && python lai.py choices
 bash -n lai.sh   # linux/mac

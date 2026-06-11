@@ -23,6 +23,9 @@ jobs:
       - name: validate config json
         run: python -c "import json,glob; files=glob.glob('config/*.json'); [json.load(open(f, encoding='utf-8')) for f in files]; print('valid:', files)"
 
+      - name: test suite (30+ offline tests)
+        run: python -m unittest discover -s tests -v
+
       - name: catalog renders
         run: python lai.py catalog
 

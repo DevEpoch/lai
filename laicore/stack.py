@@ -752,6 +752,17 @@ def cmd_start(args):
     side = load_json(GEN_SIDE)
     if not yaml_path.exists() or side is None:
         die("config missing - run: lai config")
+    # self-heal: models that finished downloading after the last `lai config`
+    ch = load_json(CHOICES_PATH) or {"roles": {}}
+    configured = {s_["name"] for s_ in side}
+    arrived = [r for r in ("autocomplete", "embeddings")
+               if r not in configured and (ch["roles"].get(r) or {})
+               and model_file((ch["roles"].get(r) or {}).get("model"))]
+    if arrived:
+        info(f"models arrived since last config ({', '.join(arrived)}) - "
+             "regenerating")
+        cmd_config(args)
+        side = load_json(GEN_SIDE)
 
     pids = {}
     for s in side:
@@ -1821,6 +1832,11 @@ def update_policy():
                                                           "ask")
 
 
+def ver_key(v):
+    """Numeric version ordering: 0.10.0 > 0.9.3 (string compare lies)."""
+    return [int(x) for x in re.findall(r"\d+", v)[:4]] or [0]
+
+
 def _changelog_delta(since_version):
     """Entries from CHANGELOG.md newer than the given version."""
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8",
@@ -1830,7 +1846,7 @@ def _changelog_delta(since_version):
     for line in text.splitlines():
         m = re.match(r"## \[([0-9][\w.\-]*)\]", line)
         if m:
-            take = m.group(1) > since_version
+            take = ver_key(m.group(1)) > ver_key(since_version)
         if take:
             out.append(line)
     return "\n".join(out).strip()
@@ -1925,3 +1941,12 @@ def cmd_update(args):
     if any(f.startswith("config/catalog") for f in files):
         info("catalog changed: lai plan to re-evaluate")
     notify_os("lai updated", f"{behind} change(s) applied - see CHANGELOG")
+
+
+def cmd_selftest(args):
+    info("running the offline test suite (tests/)...")
+    r = subprocess.run([sys.executable, "-m", "unittest", "discover",
+                        "-s", str(ROOT / "tests")], cwd=str(ROOT))
+    if r.returncode != 0:
+        die("selftest FAILED")
+    ok("all tests passed")

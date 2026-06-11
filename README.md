@@ -76,7 +76,8 @@ lai validate    # end-to-end smoke tests (chat, tool calls, autocomplete, RAG)
 lai bench       # tokens/sec vs your tier's targets; --quality runs a task-solving suite
 ```
 
-The dashboard (Vue 3 + TypeScript) starts with the stack at `http://127.0.0.1:8090` (also behind the **Local AI Env** desktop/app-menu shortcut
+The dashboard (Vue 3 + TypeScript, in English / ????? / ??????? with full RTL)
+starts with the stack at `http://127.0.0.1:8090` (also behind the **Local AI Env** desktop/app-menu shortcut
 that the installer creates, or `lai shortcut` anytime):
 
 ```text
@@ -137,9 +138,10 @@ Full team workflow: [docs/07-projects.md](docs/07-projects.md).
 ## Skills, research, and git AI
 
 ```text
-lai skill list / add <name>    # reusable agent skills, committed with the project:
-                               #   interview (clarify-then-spec), review, research,
-                               #   tdd, adr - `lai new` installs the core four
+lai skill list / add <name>    # 9 built-in skills: interview, review, research, tdd,
+                               #   adr, memory, debug, security, docs-first
+lai skill new <name> [--ai "description"]   # create your own - hand-written or drafted
+                               #   by your local model; --project puts it IN the repo
 lai git review [--base ref]    # AI code review of your diff, [BUG/RISK/TEST] file:line
 lai git commit [--apply]       # conventional commit message from staged changes
 lai git resolve                # AI merge-conflict resolution (verified, per-file approval)
@@ -168,6 +170,10 @@ lai cloud add openrouter   # OPTIONAL cloud fallback (OpenRouter/OpenAI/Anthropi
                            #   used only via or:/oa:/an: model prefixes - local stays default
 lai info                # one-screen summary of the entire environment
 lai catalog --update    # pull the latest published recommendation table (diff + approval)
+lai refresh             # discover NEW models on Hugging Face + catalog/self updates;
+                        #   OS notification on findings; --schedule weekly automates it
+lai update              # self-update over git (only changed files move, shows the
+                        #   CHANGELOG delta first); --policy ask|auto|never; --to <version>
 ```
 
 Details: [docs/09-team-tune-docsrag.md](docs/09-team-tune-docsrag.md).
@@ -242,8 +248,11 @@ working on lai itself.
 ## Contributing
 
 Most contributions are catalog edits, not code - see [CONTRIBUTING.md](CONTRIBUTING.md).
-CI validates on Windows, Linux, and macOS, and pull requests get a free automated
-AI review via GitHub Models (best-effort, humans decide).
+`lai selftest` runs the offline test suite (30+ tests: planning kernel, parsers,
+catalog integrity, i18n parity, UI artifacts); CI runs it on Windows, Linux, and
+macOS, and pull requests get a free automated AI review via GitHub Models.
+Every release documents its changes in [CHANGELOG.md](CHANGELOG.md) - that is
+what `lai update` shows users before applying.
 
 ## License
 

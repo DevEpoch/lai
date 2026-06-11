@@ -12,6 +12,7 @@ the complete command/file/API surface.
 ```bash
 python -m compileall -q laicore lai.py        # compile check (the CI gate)
 python -c "import json,glob; [json.load(open(f, encoding='utf-8')) for f in glob.glob('config/*.json')]"
+python -m unittest discover -s tests       # 30+ offline tests (lai selftest)
 python lai.py catalog && python lai.py choices  # smoke
 cd ui && npm run build                        # dashboard (Vue 3 + TS -> ui/dist, committed)
 cd editors/vscode && npx tsc -p .             # extension (TS -> out/, committed)

@@ -26,7 +26,11 @@ anywhere: python lai.py <command> [--yes]
 
 | Command | Purpose |
 | --- | --- |
+| `go` | EASIEST PATH: one friendly approval, then everything (beginners) |
 | `check` | hardware + dependency report with per-OS install hints |
+| `refresh [--quiet] [--schedule daily\|weekly\|off]` | discover new HF models + catalog/self updates; OS notifications |
+| `update [--check] [--policy ask\|auto\|never] [--list] [--to <ver>]` | git-based differential self-update with CHANGELOG delta |
+| `selftest` | offline test suite (tests/, 30+ unittest cases) |
 | `setup` | guided install: ports check -> plan -> engines -> models -> config -> IDE -> docker -> start |
 | `plan [--use-case X] [--vram-gb N]` | detect hardware, match tier, apply use-case overlay, review/edit, save to state/choices.json |
 | `choices` | show current per-role model selections + fitting alternatives |
@@ -42,7 +46,7 @@ anywhere: python lai.py <command> [--yes]
 | `tune` | timed llama-server trials (offload depth / KV / threads), apply fastest |
 | `new [--stack S --path P]` | scaffold a project (ecosystem generator + AI layer) |
 | `gate [path] [--fix]` | verify/fix this machine against a project's .lai/project.json |
-| `skill list / add <name> [--path P]` | install agent skill packs (interview, review, research, tdd, adr, memory) |
+| `skill list / add / new <name> [--ai "desc"] [--project P]` | 9 built-in skill packs; create custom ones (model-draftable); project-local in .lai/skills/ |
 | `git review\|commit\|resolve\|explain [--model M]` | AI git helper on the local endpoint |
 | `chat [--model M] [--polish]` | streaming terminal REPL; @file attach; /model /polish /clear |
 | `docs add <url\|file\|pdf> / search "q" / list` | per-project documentation RAG (Qdrant) |
