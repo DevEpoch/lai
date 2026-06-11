@@ -182,6 +182,18 @@ def cmd_ui(args):
 
         def do_POST(self):
             try:
+                # block cross-origin browser requests: any website can POST
+                # to 127.0.0.1 otherwise (classic localhost-daemon CSRF)
+                origin = self.headers.get("Origin", "")
+                host = self.headers.get("Host", "")
+                if origin and not re.match(
+                        r"https?://(127\.0\.0\.1|localhost)(:\d+)?$", origin):
+                    self._send({"error": "forbidden origin"}, 403)
+                    return
+                if host and not re.match(
+                        r"(127\.0\.0\.1|localhost)(:\d+)?$", host):
+                    self._send({"error": "forbidden host"}, 403)
+                    return
                 u = urlparse(self.path)
                 length = int(self.headers.get("Content-Length") or 0)
                 body = json.loads(self.rfile.read(length) or b"{}") \
@@ -374,10 +386,10 @@ def cmd_ui(args):
                         return
                     if act == "add" and body.get("key"):
                         cl[prov] = body["key"]
-                        save_text(SECRETS_PATH, json.dumps(sec, indent=2))
+                        save_secrets(sec)
                     elif act == "remove":
                         cl.pop(prov, None)
-                        save_text(SECRETS_PATH, json.dumps(sec, indent=2))
+                        save_secrets(sec)
                     elif act == "use" and body.get("model"):
                         prefs = cloud_prefs()
                         prefs[prov] = {"model": body["model"],

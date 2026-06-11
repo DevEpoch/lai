@@ -90,6 +90,15 @@ class TestDashboardApi(unittest.TestCase):
         html = urllib.request.urlopen(req, timeout=10).read().decode()
         self.assertIn("assets/index-", html)
 
+    def test_cross_origin_post_is_blocked(self):
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}/api/start", data=b"{}",
+            headers={"Content-Type": "application/json",
+                     "Origin": "https://evil.example", "User-Agent": "t"})
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            urllib.request.urlopen(req, timeout=10)
+        self.assertEqual(cm.exception.code, 403)
+
     def test_error_paths(self):
         for path, payload, want in (
                 ("/api/nope", None, 404),

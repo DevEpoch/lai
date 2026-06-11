@@ -27,6 +27,8 @@ def list_skills(project=None):
 
 def install_skill(name, project_path, force=False):
     """Copy a skill into a project. Returns list of actions taken."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", str(name or "")):
+        raise ValueError("invalid skill name")
     src = None
     for base in skill_dirs(project_path):
         if load_json(base / name / "skill.json"):

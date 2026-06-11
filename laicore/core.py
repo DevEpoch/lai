@@ -892,3 +892,14 @@ def mirror_speed(endpoint, mb=2):
         return 0.0
     dt = max(time.time() - t0, 0.01)
     return round(got / 1048576 / dt, 2)
+
+
+def save_secrets(sec):
+    """Write secrets.json with owner-only permissions (0600 on POSIX;
+    NTFS inherits the user profile ACL). Plaintext-on-disk is the
+    documented local-trust model - this narrows it to the owner."""
+    save_text(SECRETS_PATH, json.dumps(sec, indent=2))
+    try:
+        os.chmod(SECRETS_PATH, 0o600)
+    except OSError:
+        pass

@@ -115,7 +115,7 @@ def cmd_hftoken(args):
     if getattr(args, "off", False):
         sec.pop("hf_token", None)
         if sec:
-            save_text(SECRETS_PATH, json.dumps(sec, indent=2))
+            save_secrets(sec)
         else:
             SECRETS_PATH.unlink(missing_ok=True)
         ok("Hugging Face token removed")
@@ -135,7 +135,7 @@ def cmd_hftoken(args):
     if not key.startswith("hf_"):
         warn("tokens normally start with 'hf_' - storing anyway")
     sec["hf_token"] = key
-    save_text(SECRETS_PATH, json.dumps(sec, indent=2))
+    save_secrets(sec)
     ok("HF token stored in state/secrets.json (gitignored, keep private)")
     info("model downloads now use it: higher rate limits + access to "
          "gated repos you have accepted")
@@ -243,7 +243,7 @@ def cmd_cloud(args):
         die(f"unknown provider - one of: {', '.join(CLOUD)}")
     if args.action == "remove":
         cloud.pop(prov, None)
-        save_text(SECRETS_PATH, json.dumps(sec, indent=2))
+        save_secrets(sec)
         ok(f"{prov} key removed")
         return
     key = args.key
@@ -257,7 +257,7 @@ def cmd_cloud(args):
     if not key:
         die("no key given")
     cloud[prov] = key
-    save_text(SECRETS_PATH, json.dumps(sec, indent=2))
+    save_secrets(sec)
     ok(f"{prov} key stored in state/secrets.json (gitignored, keep private)")
     info("use it explicitly via prefixed model ids - it is never the default")
 
@@ -1178,14 +1178,14 @@ def cmd_apikey(args):
     if getattr(args, "off", False):
         sec.pop("api_key", None)  # keep cloud keys intact
         if sec:
-            save_text(SECRETS_PATH, json.dumps(sec, indent=2))
+            save_secrets(sec)
         else:
             SECRETS_PATH.unlink(missing_ok=True)
         info("API key removed - endpoints are open again (localhost trust)")
     else:
         key = token_secrets.token_hex(24)
         sec["api_key"] = key
-        save_text(SECRETS_PATH, json.dumps(sec, indent=2))
+        save_secrets(sec)
         ok("API key generated (stored in state/secrets.json - keep private)")
         print(f"\n      {key}\n")
         info("set this key in: Continue (~/.continue/config.yaml -> apiKey),")
