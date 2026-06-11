@@ -120,6 +120,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerWebviewViewProvider(LaiChatProvider.viewId, chat,
       { webviewOptions: { retainContextWhenHidden: true } }));
   context.subscriptions.push(
+    vscode.commands.registerCommand("lai.chatTab", () => chat.openTab()));
+  context.subscriptions.push(
     vscode.commands.registerCommand("lai.addSelection",
       () => chat.addSelection()));
 

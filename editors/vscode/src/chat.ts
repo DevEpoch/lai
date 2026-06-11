@@ -18,9 +18,34 @@ const MAX_FILE_BYTES = 24_000;   // per file
 const MAX_TOTAL_BYTES = 64_000;  // per attach action
 const MAX_FILES = 40;
 
+type ViewLike = { webview: vscode.Webview; show?: (f?: boolean) => void };
+
 export class LaiChatProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "lai.chatView";
-  private view?: vscode.WebviewView;
+  private view?: ViewLike;
+
+  /** Claude-Code-style: the chat as a full editor tab, not a sidebar. */
+  openTab(): void {
+    const panel = vscode.window.createWebviewPanel(
+      "lai.chatTab", "lai — Local AI", vscode.ViewColumn.Beside,
+      { enableScripts: true, retainContextWhenHidden: true });
+    this.attach(panel.webview, () => panel.reveal());
+  }
+
+  private attach(webview: vscode.Webview, show: () => void): void {
+    webview.options = { enableScripts: true };
+    webview.html = HTML;
+    webview.onDidReceiveMessage(async (m: { type: string; text?: string;
+        model?: string; code?: string }) => {
+      if (m.type === "send" && m.text) await this.send(m.text, m.model);
+      if (m.type === "insert" && m.code !== undefined) this.insert(m.code);
+      if (m.type === "clear") { this.msgs = []; this.ctx = []; }
+      if (m.type === "addfile") await this.addPath("file");
+      if (m.type === "addfolder") await this.addPath("folder");
+      if (m.type === "clearctx") { this.ctx = []; this.postCtx(); }
+    });
+    this.view = { webview, show };
+  }
   private msgs: Msg[] = [];
   private ctx: CtxBlock[] = [];
 
@@ -109,18 +134,7 @@ export class LaiChatProvider implements vscode.WebviewViewProvider {
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
-    this.view = view;
-    view.webview.options = { enableScripts: true };
-    view.webview.html = HTML;
-    view.webview.onDidReceiveMessage(async (m: { type: string;
-        text?: string; model?: string; code?: string }) => {
-      if (m.type === "send" && m.text) await this.send(m.text, m.model);
-      if (m.type === "insert" && m.code !== undefined) this.insert(m.code);
-      if (m.type === "clear") { this.msgs = []; this.ctx = []; }
-      if (m.type === "addfile") await this.addPath("file");
-      if (m.type === "addfolder") await this.addPath("folder");
-      if (m.type === "clearctx") { this.ctx = []; this.postCtx(); }
-    });
+    this.attach(view.webview, () => view.show?.(true));
   }
 
   private insert(code: string): void {
@@ -255,37 +269,59 @@ export class LaiChatProvider implements vscode.WebviewViewProvider {
 
 const HTML = /* html */ `<!DOCTYPE html><html><head><style>
   body { font: 13px var(--vscode-font-family); color: var(--vscode-foreground);
-    margin: 0; padding: 8px; display: flex; flex-direction: column;
-    height: 100vh; box-sizing: border-box; }
-  #log { flex: 1; overflow-y: auto; display: flex; flex-direction: column;
-    gap: 6px; padding-bottom: 8px; }
-  .m { border-radius: 8px; padding: 6px 10px; white-space: pre-wrap;
-    word-break: break-word; max-width: 95%; }
+    margin: 0; display: flex; flex-direction: column; height: 100vh;
+    box-sizing: border-box; background: var(--vscode-editor-background); }
+  #head { display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+    border-bottom: 1px solid var(--vscode-widget-border, #3333);
+    font-weight: 600; }
+  #head .dot { width: 8px; height: 8px; border-radius: 50%;
+    background: var(--vscode-charts-green); }
+  #head .sub { font-weight: 400; opacity: .6; font-size: 11px; }
+  #wrap { flex: 1; overflow-y: auto; }
+  #log { max-width: 760px; margin: 0 auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px; }
+  .m { border-radius: 10px; padding: 8px 12px; white-space: pre-wrap;
+    word-break: break-word; max-width: 88%; line-height: 1.45; }
   .u { align-self: flex-end; background: var(--vscode-button-background);
     color: var(--vscode-button-foreground); }
   .a { align-self: flex-start; background: var(--vscode-editorWidget-background);
     border: 1px solid var(--vscode-widget-border, transparent); }
   .err { color: var(--vscode-errorForeground); }
-  .t { opacity: .65; font-size: 11px; padding: 2px 10px; }
-  #ctx { font-size: 11px; opacity: .7; min-height: 14px; }
-  #bar { display: flex; gap: 6px; }
-  textarea { flex: 1; resize: none; height: 52px;
+  .t { opacity: .6; font-size: 11px; padding: 1px 12px; align-self: flex-start;
+    font-family: var(--vscode-editor-font-family); }
+  #foot { border-top: 1px solid var(--vscode-widget-border, #3333);
+    padding: 10px 16px 12px; }
+  #inner { max-width: 760px; margin: 0 auto; }
+  #ctx { font-size: 11px; opacity: .7; min-height: 14px; padding: 0 2px 4px; }
+  #box { display: flex; align-items: flex-end; gap: 8px;
     background: var(--vscode-input-background);
-    color: var(--vscode-input-foreground);
-    border: 1px solid var(--vscode-input-border, transparent);
-    border-radius: 6px; padding: 6px; font: inherit; }
-  button, select { background: var(--vscode-button-secondaryBackground);
-    color: var(--vscode-button-secondaryForeground); border: 0;
-    border-radius: 6px; padding: 4px 10px; cursor: pointer; font: inherit; }
+    border: 1px solid var(--vscode-input-border, #5555);
+    border-radius: 12px; padding: 8px 10px; }
+  #box:focus-within { border-color: var(--vscode-focusBorder); }
+  textarea { flex: 1; resize: none; height: 44px; border: 0; outline: 0;
+    background: transparent; color: var(--vscode-input-foreground);
+    font: inherit; }
+  button, select { background: transparent;
+    color: var(--vscode-foreground); border: 0; border-radius: 6px;
+    padding: 4px 8px; cursor: pointer; font: inherit; opacity: .85; }
+  button:hover { background: var(--vscode-toolbar-hoverBackground); }
   #send { background: var(--vscode-button-background);
-    color: var(--vscode-button-foreground); }
-  #tools { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+    color: var(--vscode-button-foreground); border-radius: 8px;
+    padding: 6px 14px; }
+  #tools { display: flex; gap: 4px; margin-top: 6px; align-items: center;
+    font-size: 11px; }
+  #tools select { border: 1px solid var(--vscode-widget-border, #5555);
+    border-radius: 10px; font-size: 11px; }
 </style></head><body>
-  <div id="log"><div class="m a">Hi! I'm your local AI. Ask me anything about
-your code - use the "lai: Add Selection to Chat" command to give me context.
-Nothing leaves this machine.</div></div>
+  <div id="head"><span class="dot"></span> lai
+    <span class="sub">local AI — nothing leaves this machine</span></div>
+  <div id="wrap"><div id="log"><div class="m a">Hi! Ask me to review this
+project, write its documentation, find problems, or change code - I can
+read and search your files myself. Attach extra context with + file /
++ folder if you want.</div></div></div>
+  <div id="foot"><div id="inner">
   <div id="ctx"></div>
-  <div id="bar"><textarea id="in" placeholder="Ask your local AI…"></textarea>
+  <div id="box"><textarea id="in" placeholder="Ask your local AI…"></textarea>
     <button id="send">▶</button></div>
   <div id="tools">
     <select id="model" title="auto: lai picks the right model for each task">
@@ -297,17 +333,18 @@ Nothing leaves this machine.</div></div>
     <button id="addd" title="Attach a folder">+ folder</button>
     <button id="ins" disabled>Insert last code</button>
     <button id="clr">Clear</button>
-  </div>
+  </div></div></div>
 <script>
   const vs = acquireVsCodeApi();
   const log = document.getElementById("log");
+  const wrap = document.getElementById("wrap");
   const input = document.getElementById("in");
   const ins = document.getElementById("ins");
   let cur = null, lastCode = null;
   function add(cls, text) {
     const d = document.createElement("div");
     d.className = "m " + cls; d.textContent = text;
-    log.appendChild(d); log.scrollTop = log.scrollHeight; return d;
+    log.appendChild(d); wrap.scrollTop = wrap.scrollHeight; return d;
   }
   function send() {
     const t = input.value.trim(); if (!t) return;
@@ -335,7 +372,7 @@ Nothing leaves this machine.</div></div>
       document.getElementById("ctx").textContent = "model: " + m.model;
     }
     if (m.type === "delta" && cur) {
-      cur.textContent += m.text; log.scrollTop = log.scrollHeight; }
+      cur.textContent += m.text; wrap.scrollTop = wrap.scrollHeight; }
     if (m.type === "end") {
       document.getElementById("ctx").textContent = "";
       lastCode = m.code; ins.disabled = !m.code; cur = null; }

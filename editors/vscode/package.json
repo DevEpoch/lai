@@ -62,6 +62,10 @@
                                              "title":  "lai: Open Chat Sidebar"
                                          },
                                          {
+                                             "command":  "lai.chatTab",
+                                             "title":  "lai: Open Chat as Editor Tab"
+                                         },
+                                         {
                                              "command":  "lai.panel",
                                              "title":  "lai: Dashboard Panel (inside VS Code)"
                                          },

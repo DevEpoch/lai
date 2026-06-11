@@ -154,6 +154,7 @@ function run(action) {
 function activate(context) {
     const chat = new chat_1.LaiChatProvider(laiHome);
     context.subscriptions.push(vscode.window.registerWebviewViewProvider(chat_1.LaiChatProvider.viewId, chat, { webviewOptions: { retainContextWhenHidden: true } }));
+    context.subscriptions.push(vscode.commands.registerCommand("lai.chatTab", () => chat.openTab()));
     context.subscriptions.push(vscode.commands.registerCommand("lai.addSelection", () => chat.addSelection()));
     for (const a of ACTIONS) {
         context.subscriptions.push(vscode.commands.registerCommand(`lai.${a.action}`, () => run(a.action)));
