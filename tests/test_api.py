@@ -41,14 +41,17 @@ class TestDashboardApi(unittest.TestCase):
              "--port", str(cls.port)],
             stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
             cwd=str(ROOT))
-        for _ in range(40):
-            time.sleep(0.5)
+        deadline = time.monotonic() + 20.0
+        sleep_s = 0.05
+        while time.monotonic() < deadline:
+            time.sleep(sleep_s)
             try:
                 _req(cls.port, "/api/overview")
                 return
             except Exception:
                 if cls.proc.poll() is not None:
                     break
+            sleep_s = min(sleep_s * 2, 0.5)
         raise unittest.SkipTest("ui server failed to boot")
 
     @classmethod
