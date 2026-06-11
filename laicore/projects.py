@@ -4,6 +4,8 @@ from .core import *  # noqa: F401,F403
 from .stack import *  # noqa: F401,F403
 from .work import *  # noqa: F401,F403
 
+import argparse
+
 def projects_registry():
     return load_json(PROJECTS_PATH, [])
 

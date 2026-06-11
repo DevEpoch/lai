@@ -6,6 +6,8 @@ from .work import *  # noqa: F401,F403
 from .projects import *  # noqa: F401,F403
 from .stack import _kill, _port_status  # noqa: F401  (underscores: not star-exported)
 
+import argparse
+
 def _web_roots():
     """Directories the dashboard API may touch. The CLI is unrestricted
     (you typed the path yourself); the web API is confined to your home

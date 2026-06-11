@@ -3,6 +3,12 @@ benchmarks, tuning, team mode, keys."""
 
 from .core import *  # noqa: F401,F403
 
+import argparse
+import fnmatch
+import importlib.util
+import secrets as token_secrets
+import signal
+
 def pick_usecase(cat, args):
     ucs = cat.get("usecases", {})
     ids = [k for k in ucs if not k.startswith("_")]
@@ -386,10 +392,9 @@ def cmd_check(args):
             hint = win_hint if IS_WIN else (mac_hint if IS_MAC else lin_hint)
             warn(f"{name} missing -> {hint}")
 
-    try:
-        import huggingface_hub  # noqa: F401
+    if importlib.util.find_spec("huggingface_hub"):
         ok("huggingface_hub installed")
-    except ImportError:
+    else:
         warn(f"huggingface_hub missing -> "
              f"{sys.executable} -m pip install -U huggingface_hub")
 
@@ -492,28 +497,20 @@ def cmd_models(args):
     if not confirm(f"download {len(wanted)} model(s), ~{total:.0f} GB total, "
                    "from Hugging Face?"):
         return
-    try:
-        from huggingface_hub import snapshot_download
-    except ImportError:
+    if not importlib.util.find_spec("huggingface_hub"):
         if not confirm("huggingface_hub (Python package) is required - "
                        "pip install it now?"):
             die("cannot download models without huggingface_hub")
         subprocess.run([sys.executable, "-m", "pip", "install", "-U",
                         "huggingface_hub"], check=True)
-        from huggingface_hub import snapshot_download
-    try:
-        import hf_transfer  # noqa: F401
-    except ImportError:
+    if not importlib.util.find_spec("hf_transfer"):
         if confirm("install 'hf_transfer' (pip) for 3-10x faster, "
                    "multi-connection downloads?"):
             subprocess.run([sys.executable, "-m", "pip", "install",
                             "hf_transfer"], check=False)
-    try:
-        import hf_transfer  # noqa: F401,F811
+    if importlib.util.find_spec("hf_transfer"):
         os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
         info("hf_transfer enabled (multi-connection downloads)")
-    except ImportError:
-        pass
     hf_tok = (load_json(SECRETS_PATH) or {}).get("hf_token")
     if hf_tok:
         os.environ.setdefault("HF_TOKEN", hf_tok)
@@ -561,11 +558,7 @@ def cmd_models(args):
                 return False
         return proc.returncode == 0
 
-    try:
-        import hf_transfer  # noqa: F401,F811
-        ht_available = True
-    except ImportError:
-        ht_available = False
+    ht_available = importlib.util.find_spec("hf_transfer") is not None
 
     wanted.sort(key=lambda x: x[1]["disk_gb"])  # small models first:
     # side servers + vision come online while the big coder downloads

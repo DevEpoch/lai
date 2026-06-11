@@ -6,6 +6,8 @@ from .work import *  # noqa: F401,F403
 from .projects import *  # noqa: F401,F403
 from .webui import cmd_ui  # noqa: F401
 
+import argparse
+
 DESCRIPTION = """lai - Local AI programming environment manager.
 
 Cross-platform (Windows / Linux / macOS) manager for a fully local AI coding
@@ -76,11 +78,10 @@ pass --yes (or -y) to approve automatically.
 """
 
 def cmd_info(args):
-    cat = load_json(CATALOG_PATH, {})
     choices = load_json(CHOICES_PATH)
     print()
     info(f"lai {VERSION} | endpoint: {endpoint_base()}"
-         + (f" (team server)" if remote_cfg() else " (local)"))
+         + (" (team server)" if remote_cfg() else " (local)"))
     if choices:
         roles = ", ".join(f"{r}={e['model']}" if e else f"{r}=-"
                           for r, e in choices["roles"].items())
