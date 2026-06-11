@@ -204,7 +204,11 @@ def cmd_ui(args):
                     self._send({"ok": True})
                 elif u.path == "/api/set":
                     cat = load_catalog()
-                    choices = load_choices()
+                    choices = load_json(CHOICES_PATH)
+                    if not choices:
+                        self._send({"error": "no plan yet - run "
+                                    "Re-plan (or `lai plan`) first"}, 400)
+                        return
                     try:
                         warnings = set_choice(cat, choices, body.get("role"),
                                               body.get("model"),
