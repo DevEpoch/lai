@@ -1,0 +1,14 @@
+# Aider config - copy to your repo root as .aider.conf.yml
+# (or to your home directory to apply everywhere)
+#
+#   Windows: Copy-Item D:\vibe-coding\local-ai-env\config\aider.conf.yml .\.aider.conf.yml
+#   Linux:   cp ~/local-ai-env/config/aider.conf.yml ./.aider.conf.yml
+
+model: openai/coder
+openai-api-base: http://localhost:8080/v1
+openai-api-key: local
+
+# Sensible defaults for local models
+auto-commits: true
+map-tokens: 2048        # repo-map budget; keep lean for hybrid (laptop6) speed
+edit-format: diff

@@ -1,0 +1,44 @@
+# Continue config - installed to ~/.continue/config.yaml by `lai ide`
+# All endpoints are local; the "apiKey" just has to be non-empty.
+name: local-ai-env
+version: 1.0.0
+schema: v1
+
+models:
+  - name: coder (local)
+    provider: openai
+    apiBase: http://localhost:8080/v1
+    apiKey: local
+    model: coder
+    roles: [chat, edit, apply]
+    defaultCompletionOptions:
+      contextLength: 32768   # raise to 65536 on the egpu24 profile
+
+  - name: thinker (local)
+    provider: openai
+    apiBase: http://localhost:8080/v1
+    apiKey: local
+    model: thinker
+    roles: [chat]
+
+  - name: autocomplete (local)
+    provider: openai
+    apiBase: http://localhost:8081/v1
+    apiKey: local
+    model: autocomplete
+    roles: [autocomplete]
+
+  - name: embeddings (local)
+    provider: openai
+    apiBase: http://localhost:8082/v1
+    apiKey: local
+    model: embeddings
+    roles: [embed]
+
+context:
+  - provider: file
+  - provider: code
+  - provider: codebase
+  - provider: diff
+  - provider: terminal
+  - provider: problems

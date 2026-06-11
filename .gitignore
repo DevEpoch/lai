@@ -1,0 +1,19 @@
+# machine-local runtime state - never commit (contains secrets.json!)
+state/
+
+# binaries, models, runtime artifacts
+tools/
+models/
+logs/
+run/
+benchmarks/
+tmp/
+
+# python
+__pycache__/
+*.pyc
+
+# vscode extension build deps
+editors/vscode/node_modules/
+ui/node_modules/
+tmp/

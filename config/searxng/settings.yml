@@ -1,0 +1,12 @@
+# SearXNG settings for local-ai-env (mounted read-only into the container).
+# json format is required for the MCP server and Open WebUI integrations.
+use_default_settings: true
+
+server:
+  secret_key: "local-ai-env-not-secret-localhost-only"
+  limiter: false
+
+search:
+  formats:
+    - html
+    - json

@@ -1,0 +1,92 @@
+# Qdrant (repo RAG) + OpenHands (autonomous agent)
+# Started by: lai docker      (project name: local-ai)
+#
+# If the OpenHands image tags age out, check the current ones at
+# https://docs.all-hands.dev and update the two image lines below.
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: local-ai-qdrant
+    ports:
+      - "${LAI_QDRANT_PORT:-6333}:6333"   # REST (Roo Code talks to this)
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  openhands:
+    image: ghcr.io/all-hands-ai/openhands:latest
+    container_name: local-ai-openhands
+    ports:
+      - "${LAI_OPENHANDS_PORT:-3000}:3000"
+    environment:
+      SANDBOX_RUNTIME_CONTAINER_IMAGE: ghcr.io/all-hands-ai/runtime:latest
+      # Default LLM settings (also configurable in the UI at :3000):
+      LLM_BASE_URL: http://host.docker.internal:${LAI_SWAP_PORT:-8080}/v1
+      LLM_MODEL: openai/coder
+      LLM_API_KEY: local
+      LOG_ALL_EVENTS: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # needed to spawn the sandbox runtime
+      - openhands_state:/.openhands-state
+    extra_hosts:
+      - "host.docker.internal:host-gateway"          # makes the host endpoint reachable on Linux
+    restart: unless-stopped
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: local-ai-webui
+    ports:
+      - "${LAI_WEBUI_PORT:-3001}:8080"
+    environment:
+      OPENAI_API_BASE_URL: http://host.docker.internal:${LAI_SWAP_PORT:-8080}/v1
+      OPENAI_API_KEY: local           # set to your key after `lai apikey`
+      WEBUI_AUTH: "False"             # single-user, local only
+      ENABLE_OLLAMA_API: "False"
+      # web-augmented answers via the local SearXNG (env names per Open WebUI
+      # docs; if search does not appear, check their current variable names)
+      ENABLE_RAG_WEB_SEARCH: "True"
+      RAG_WEB_SEARCH_ENGINE: searxng
+      SEARXNG_QUERY_URL: "http://searxng:8080/search?q=<query>"
+    volumes:
+      - webui_data:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: local-ai-searxng
+    ports:
+      - "${LAI_SEARXNG_PORT:-8888}:8080"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      SEARXNG_BASE_URL: http://localhost:8888/
+    restart: unless-stopped
+
+  # EXPERIMENTAL cross-project memory (Mem0's OpenMemory MCP server).
+  # Off by default; start with: docker compose --profile memory up -d
+  # Verify image/env names against https://docs.mem0.ai before first use,
+  # then add the MCP endpoint (http://localhost:8765) to Roo Code.
+  openmemory:
+    image: mem0/openmemory-mcp:latest
+    container_name: local-ai-openmemory
+    profiles: ["memory"]
+    ports:
+      - "${LAI_OPENMEMORY_PORT:-8765}:8765"
+    environment:
+      OPENAI_BASE_URL: http://host.docker.internal:${LAI_SWAP_PORT:-8080}/v1
+      OPENAI_API_KEY: local
+      QDRANT_HOST: qdrant
+    depends_on:
+      - qdrant
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+  openhands_state:
+  webui_data:

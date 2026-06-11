@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>lai - Local AI Environment</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<style>
+  :root { --bg:#0d1017; --card:#161a24; --line:#262b38; --txt:#d7dce6;
+          --dim:#8b93a7; --acc:#4da3ff; --ok:#3fb96b; --bad:#e05656;
+          --warn:#d9a23c;
+          --mono:ui-monospace,"Cascadia Code","JetBrains Mono",Consolas,monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt);
+         font:14px/1.5 system-ui, "Segoe UI", sans-serif; }
+  header { padding:12px 22px; border-bottom:1px solid var(--line);
+           display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+           position:sticky; top:0; background:var(--bg); z-index:2; }
+  header img { width:30px; height:30px; }
+  header h1 { font-size:18px; margin:0; font-family:var(--mono); }
+  header .sub { color:var(--dim); font-size:13px; font-family:var(--mono); }
+  footer { padding:14px 22px 24px; color:var(--dim); font-size:12px;
+           font-family:var(--mono); }
+  main { display:grid; gap:14px; padding:14px 22px;
+         grid-template-columns:repeat(auto-fit,minmax(420px,1fr)); }
+  .card { background:var(--card); border:1px solid var(--line);
+          border-radius:12px; padding:14px 16px;
+          transition:border-color .15s ease; }
+  .card:hover { border-color:#34405a; }
+  .card h2 { font-size:13px; margin:0 0 10px; color:var(--acc);
+             text-transform:uppercase; letter-spacing:.08em;
+             font-family:var(--mono); }
+  table { width:100%; border-collapse:collapse; font-family:var(--mono);
+          font-size:13px; }
+  td, th { padding:5px 6px; text-align:left; vertical-align:middle; }
+  th { color:var(--dim); font-weight:500; font-size:12px; }
+  tr + tr td { border-top:1px solid var(--line); }
+  select, button { background:#222736; color:var(--txt); font:inherit;
+       border:1px solid var(--line); border-radius:6px; padding:5px 10px; }
+  select { max-width:230px; }
+  button { cursor:pointer; }
+  button:hover { border-color:var(--acc); }
+  button.primary { background:var(--acc); color:#0b0e14; border:none;
+                   font-weight:600; }
+  button:disabled { opacity:.45; cursor:default; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%;
+         margin-right:8px; background:var(--bad); }
+  .dot.up { background:var(--ok); }
+  .dim { color:var(--dim); font-size:12px; }
+  .bar { background:#222736; border-radius:5px; height:9px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--acc); width:0; }
+  .bar i.done { background:var(--ok); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  pre { background:#0c0f15; border:1px solid var(--line); border-radius:8px;
+        padding:10px; max-height:260px; overflow:auto; font-size:12px;
+        white-space:pre-wrap; word-break:break-all; }
+  .msg { margin-top:8px; font-size:12px; min-height:16px; }
+  .msg.ok { color:var(--ok); } .msg.bad { color:var(--bad); }
+  .pill { font-size:11px; border:1px solid var(--line); border-radius:99px;
+          padding:1px 8px; color:var(--dim); font-family:var(--mono); }
+  .pill.busy { color:var(--acc); border-color:var(--acc);
+               animation:pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity:.45; } }
+  .bar i { transition:width .6s ease; }
+  a { color:var(--acc); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<header>
+  <img src="/icon.svg" alt="">
+  <h1>lai <span class="dim">local AI environment</span></h1>
+  <span class="sub" id="hwline">detecting...</span>
+</header>
+<main>
+
+<div class="card">
+  <h2>Choices</h2>
+  <div class="row" style="margin:0 0 10px">
+    <select id="usecase"></select>
+    <button onclick="replan()">Re-plan for this use case</button>
+  </div>
+  <table id="choices"></table>
+  <div class="row">
+    <button class="primary" onclick="post('/api/config','cfgmsg','config regenerated - restart to apply')">Apply (regenerate config)</button>
+  </div>
+  <div class="msg" id="cfgmsg"></div>
+</div>
+
+<div class="card">
+  <h2>Projects</h2>
+  <div class="row" style="margin:0 0 8px">
+    <select id="newstack"></select>
+    <input id="newpath" placeholder="path, e.g. D:\projects\mytool"
+           style="flex:1;min-width:180px;background:#222736;color:var(--txt);
+                  border:1px solid var(--line);border-radius:6px;padding:5px 10px">
+    <button class="primary" onclick="newProject()">Create</button>
+  </div>
+  <table id="projects"></table>
+  <div class="msg" id="projmsg"></div>
+  <pre id="gateout" style="display:none"></pre>
+  <div class="dim">Team config travels in the repo (<code>AGENTS.md</code>,
+    <code>.vscode/</code>, <code>.lai/project.json</code>); personal overrides go in
+    the untracked <code>.lai/local.json</code>. On a new machine: clone, then Gate.</div>
+</div>
+
+<div class="card">
+  <h2>Stack</h2>
+  <table id="services"></table>
+  <div class="row">
+    <button class="primary" onclick="post('/api/start','stackmsg','started')">Start</button>
+    <button onclick="post('/api/restart','stackmsg','restarted')">Restart</button>
+    <button onclick="post('/api/stop','stackmsg','stopped')">Stop</button>
+  </div>
+  <div class="msg" id="stackmsg"></div>
+  <div class="dim">Open: <a href="http://localhost:3001" target="_blank">Chat UI</a> ·
+    <a href="http://localhost:3000" target="_blank">OpenHands</a> ·
+    <a href="http://localhost:8080/ui" target="_blank">llama-swap</a></div>
+</div>
+
+<div class="card">
+  <h2>Downloads</h2>
+  <table id="downloads"></table>
+  <div class="row">
+    <button class="primary" id="dlstart" onclick="dl('start')">Start downloads</button>
+    <button id="dlpause" onclick="dl('pause')">Pause</button>
+    <span class="pill" id="dlstate">idle</span>
+  </div>
+  <div class="dim">Resumable - interrupted or paused downloads continue where
+    they stopped, even after a reboot. Uses the hf_transfer accelerator
+    (installed automatically on first run).</div>
+  <div class="msg" id="dlmsg"></div>
+</div>
+
+<div class="card">
+  <h2>Benchmarks</h2>
+  <div class="row">
+    <button onclick="bench(false)">Run speed bench</button>
+    <button onclick="bench(true)">Run quality bench</button>
+    <span class="pill" id="benchstate">idle</span>
+  </div>
+  <div class="msg" id="benchmsg"></div>
+  <div id="lastq" class="dim"></div>
+</div>
+
+<div class="card">
+  <h2>Maintenance</h2>
+  <div class="row">
+    <button onclick="verify()">Verify catalog repos</button>
+    <span class="pill" id="versions"></span>
+  </div>
+  <pre id="verifyout" style="display:none"></pre>
+  <div class="dim" style="margin-top:8px">The recommendation table is
+    <code>config/catalog.json</code> - edit it, then Re-plan.</div>
+</div>
+
+<div class="card">
+  <h2>Logs</h2>
+  <div class="row" style="margin:0 0 8px">
+    <select id="logname"></select>
+    <button onclick="loadLog()">Refresh</button>
+  </div>
+  <pre id="logout">select a log...</pre>
+</div>
+
+</main>
+<footer id="footer">lai</footer>
+<script>
+const $ = id => document.getElementById(id);
+const ROLES = ["coder","thinker","vision","autocomplete","embeddings"];
+let CAND = {}, META = {}, CUR = null, SKILLS = {};
+
+async function api(path, body) {
+  const r = await fetch(path, body !== undefined
+    ? {method:"POST", headers:{"Content-Type":"application/json"},
+       body:JSON.stringify(body)} : {});
+  let j = {}; try { j = await r.json(); } catch(e) {}
+  if (!r.ok) throw j;
+  return j;
+}
+function msg(id, text, cls) {
+  const el = $(id); el.textContent = text || ""; el.className = "msg " + (cls||"");
+  if (text) setTimeout(() => { if (el.textContent === text) el.textContent=""; }, 8000);
+}
+async function post(path, msgid, okText) {
+  try { await api(path, {}); msg(msgid, okText, "ok"); }
+  catch(e) { msg(msgid, e.error || "failed", "bad"); }
+  refresh();
+}
+
+function renderChoices(ch) {
+  const t = $("choices");
+  t.innerHTML = "<tr><th>role</th><th>model</th><th>mode / ctx</th></tr>";
+  for (const role of ROLES) {
+    const e = (ch.roles||{})[role];
+    const opts = (CAND[role]||[]).map(m =>
+      `<option value="${m}" ${e&&e.model===m?"selected":""}>${m}</option>`).join("");
+    const noneSel = e ? "" : "selected";
+    const meta = e ? `${e.mode||""} · ctx ${e.ctx||"-"}` : "disabled";
+    t.insertAdjacentHTML("beforeend",
+      `<tr><td>${role}</td>
+       <td><select onchange="setRole('${role}',this.value)">
+           <option value="none" ${noneSel}>(none)</option>${opts}</select></td>
+       <td class="dim">${meta}</td></tr>`);
+  }
+}
+async function setRole(role, model, force) {
+  try {
+    const r = await api("/api/set", {role, model, force: !!force});
+    msg("cfgmsg", (r.warnings||[]).join("; ") ||
+        `${role} -> ${model} (click Apply to regenerate config)`, r.warnings && r.warnings.length ? "bad" : "ok");
+  } catch(e) {
+    if (e.needs_force && confirm(e.error + "\n\nForce it anyway?"))
+      return setRole(role, model, true);
+    msg("cfgmsg", e.error || "failed", "bad");
+  }
+  refresh();
+}
+async function replan() {
+  try { await api("/api/plan", {usecase: $("usecase").value});
+        msg("cfgmsg","re-planned - review, then Apply","ok"); }
+  catch(e) { msg("cfgmsg", e.error || "failed", "bad"); }
+  await loadCandidates(); refresh();
+}
+async function dl(action) {
+  try { await api("/api/download", {action}); } catch(e) { msg("dlmsg", e.error, "bad"); }
+  refresh();
+}
+async function bench(quality) {
+  try { await api("/api/bench", {quality});
+        msg("benchmsg", "running... watch the bench-ui log", "ok"); }
+  catch(e) { msg("benchmsg", e.error || "failed", "bad"); }
+  refresh();
+}
+async function verify() {
+  $("verifyout").style.display = "block";
+  $("verifyout").textContent = "checking Hugging Face...";
+  try {
+    const r = await api("/api/verify", {});
+    $("verifyout").textContent = r.results.map(x =>
+      `${x.status.toUpperCase().padEnd(8)} ${x.id}  (${x.repo})`).join("\n");
+  } catch(e) { $("verifyout").textContent = e.error || "failed"; }
+}
+async function loadLog() {
+  try { const r = await api("/api/logs?name=" + $("logname").value);
+        const el = $("logout"); el.textContent = r.text || "(empty)";
+        el.scrollTop = el.scrollHeight; }
+  catch(e) { $("logout").textContent = "failed"; }
+}
+async function newProject() {
+  const stack = $("newstack").value, path = $("newpath").value.trim();
+  if (!path) return msg("projmsg", "enter a path", "bad");
+  msg("projmsg", "scaffolding (generators may take a minute)...", "");
+  try {
+    const r = await api("/api/new", {stack, path});
+    msg("projmsg", "created " + r.path + " - open it in VS Code", "ok");
+    $("newpath").value = "";
+  } catch(e) { msg("projmsg", e.error || "failed", "bad"); }
+  refresh();
+}
+async function addSkill(path, pname) {
+  const name = $("sk-" + pname).value;
+  try {
+    const r = await api("/api/skill", {name, path});
+    msg("projmsg", `skill '${name}': ` + (r.actions||[]).join("; "), "ok");
+  } catch(e) { msg("projmsg", e.error || "failed", "bad"); }
+}
+async function gateProject(path, fix) {
+  const el = $("gateout"); el.style.display = "block";
+  el.textContent = "gating " + path + "...";
+  try {
+    const r = await api("/api/gate", {path, fix});
+    el.textContent = "gate (" + r.stack + "):\n" + r.results.map(x =>
+      `${x.status.padEnd(6)} ${x.item.padEnd(22)} ${x.detail||""}`).join("\n") +
+      (fix ? "\n(config regenerated - missing models: use the Downloads card)" : "");
+  } catch(e) { el.textContent = e.error || "failed"; }
+  refresh();
+}
+async function loadCandidates() {
+  const r = await api("/api/candidates");
+  CAND = r.candidates || {};
+}
+async function refresh() {
+  try {
+    const o = await api("/api/overview");
+    META = o.models_meta || {};
+    SKILLS = o.skills || {};
+    CUR = o.choices;
+    if (o.choices) {
+      const hw = o.choices.hardware || {};
+      $("hwline").textContent =
+        `${o.choices.tier} · ${(hw.gpus||[]).map(g=>g.name).join(", ")||"no GPU"}` +
+        ` · ${hw.vram_gb} GB VRAM · ${hw.ram_gb} GB RAM · engine ${o.choices.engine}` +
+        ` · catalog ${o.choices.catalog_version}` +
+        (o.remote ? ` · CONNECTED TO ${o.remote.host}:${o.remote.port}` : "");
+      renderChoices(o.choices);
+    } else {
+      $("hwline").textContent = "no plan yet - pick a use case and Re-plan";
+    }
+    const uc = $("usecase");
+    if (uc.options.length === 0) {
+      for (const [id, d] of Object.entries(o.usecases || {}))
+        uc.insertAdjacentHTML("beforeend",
+          `<option value="${id}">${id} - ${d.label||""}</option>`);
+    }
+    if (CUR && CUR.usecase) uc.value = CUR.usecase;
+    $("versions").textContent = Object.entries(o.versions||{})
+      .map(([k,v]) => `${k} ${v}`).join(" · ") || "engines not installed";
+    $("dlstate").textContent = o.running.download ? "downloading" : "idle";
+    $("dlstate").className = "pill" + (o.running.download ? " busy" : "");
+    $("benchstate").textContent = o.running.bench ? "running" : "idle";
+    $("benchstate").className = "pill" + (o.running.bench ? " busy" : "");
+    $("footer").textContent =
+      `lai ${o.lai_version || ""} · catalog ${CUR ? CUR.catalog_version : "?"}` +
+      ` · terminal: lai chat | lai git review | lai docs search` +
+      ` · all local, no cloud`;
+    $("dlstart").disabled = o.running.download;
+    $("dlpause").disabled = !o.running.download;
+    $("lastq").textContent = o.last_quality
+      ? `last quality run: ${o.last_quality.model} - ${o.last_quality.score}/${o.last_quality.total} (${o.last_quality.when})`
+      : "";
+    if ($("logname").options.length === 0)
+      for (const n of o.logs || [])
+        $("logname").insertAdjacentHTML("beforeend", `<option>${n}</option>`);
+    if ($("newstack").options.length === 0)
+      for (const [id, d] of Object.entries(o.stacks || {}))
+        $("newstack").insertAdjacentHTML("beforeend",
+          `<option value="${id}">${id} - ${d.label}</option>`);
+
+    const pj = await api("/api/projects");
+    $("projects").innerHTML = (pj.projects || []).map(p => {
+      const g = p.last_gate;
+      const badge = g ? `<span class="pill" style="color:${g.fail?"var(--bad)":"var(--ok)"}">
+        ${g.fail?g.fail+" fail":"ok"}${g.warn?" · "+g.warn+" warn":""}</span>` : "";
+      const esc = p.path.replace(/\\/g, "\\\\");
+      const skillOpts = Object.keys(SKILLS).map(s => `<option>${s}</option>`).join("");
+      return `<tr><td>${p.name}</td><td class="dim">${p.stack}</td><td>${badge}</td>
+        <td><button onclick="gateProject('${esc}',false)">Gate</button>
+            <button onclick="gateProject('${esc}',true)">Fix</button>
+            <select id="sk-${p.name}" title="skill">${skillOpts}</select>
+            <button onclick="addSkill('${esc}','${p.name}')">+Skill</button></td></tr>`;
+    }).join("") || "<tr><td class='dim'>no projects yet - create one above</td></tr>";
+
+    const TOOL_URLS = {
+      "llama-swap": "http://localhost:8080/ui",
+      "qdrant": "http://localhost:6333/dashboard",
+      "openhands": "http://localhost:3000",
+      "open-webui": "http://localhost:3001",
+      "searxng": "http://localhost:8888",
+    };
+    const s = await api("/api/status");
+    $("services").innerHTML = s.map(x => {
+      const key = Object.keys(TOOL_URLS).find(k => x.name.startsWith(k));
+      const link = key && x.up ?
+        `<a href="${TOOL_URLS[key]}" target="_blank">open</a>` : "";
+      return `<tr><td><span class="dot ${x.up?"up":""}"></span>${x.name}</td>
+       <td class="dim">${x.up?"up":"down"}</td><td>${link}</td></tr>`;
+    }).join("");
+
+    const d = await api("/api/downloads");
+    $("downloads").innerHTML = d.items.length ? d.items.map(x => {
+      const pct = Math.min(100, Math.round(100 * x.have_gb / (x.expected_gb||1)));
+      return `<tr><td style="width:38%">${x.id}</td>
+        <td><div class="bar"><i class="${x.done?"done":""}" style="width:${x.done?100:pct}%"></i></div></td>
+        <td class="dim" style="width:90px">${x.done?"done":pct+"%"} · ${x.expected_gb} GB</td></tr>`;
+    }).join("") : "<tr><td class='dim'>no plan yet</td></tr>";
+  } catch(e) { /* server briefly busy (e.g. during start) - retry next tick */ }
+}
+loadCandidates().then(refresh);
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

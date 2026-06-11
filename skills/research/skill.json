@@ -1,0 +1,4 @@
+{
+  "description": "Web research mode: search (local SearXNG via MCP) -> fetch -> cross-check -> cite. Installs .roo/mcp.json with searxng + fetch servers (requires npx/uvx and `lai docker`).",
+  "mode": "mode.json"
+}

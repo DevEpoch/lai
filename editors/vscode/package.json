@@ -1,0 +1,47 @@
+{
+  "name": "local-ai-env",
+  "displayName": "Local AI Env (lai)",
+  "description": "Control your local AI programming environment from VS Code: dashboard panel, stack, gate, AI review, chat, benchmarks.",
+  "version": "0.2.0",
+  "publisher": "local-ai-env",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/DevEpoch/lai" },
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "scripts": {
+    "build": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  },
+  "contributes": {
+    "commands": [
+      { "command": "lai.panel",     "title": "lai: Dashboard Panel (inside VS Code)" },
+      { "command": "lai.dashboard", "title": "lai: Open Dashboard (browser)" },
+      { "command": "lai.start",     "title": "lai: Start Stack" },
+      { "command": "lai.stop",      "title": "lai: Stop Stack" },
+      { "command": "lai.status",    "title": "lai: Status" },
+      { "command": "lai.gate",      "title": "lai: Gate Current Project" },
+      { "command": "lai.review",    "title": "lai: AI Review My Changes" },
+      { "command": "lai.chat",      "title": "lai: Chat (terminal)" },
+      { "command": "lai.validate",  "title": "lai: Validate End-to-End" },
+      { "command": "lai.bench",     "title": "lai: Quality Benchmark" },
+      { "command": "lai.setup",     "title": "lai: Full Setup" },
+      { "command": "lai.menu",      "title": "lai: Menu" }
+    ],
+    "configuration": {
+      "title": "Local AI Env",
+      "properties": {
+        "lai.home": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the lai folder (containing lai.py). Auto-detected from the workspace, LAI_HOME, or ~/lai if empty."
+        }
+      }
+    }
+  }
+}

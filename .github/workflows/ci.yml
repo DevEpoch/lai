@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: compile
+        run: python -m compileall -q laicore lai.py
+
+      - name: validate config json
+        run: python -c "import json,glob; files=glob.glob('config/*.json'); [json.load(open(f, encoding='utf-8')) for f in files]; print('valid:', files)"
+
+      - name: catalog renders
+        run: python lai.py catalog
+
+      - name: plan on this runner (cpu tier, no installs)
+        run: python lai.py plan --yes --use-case scripts
+
+      - name: choices render
+        run: python lai.py choices
+
+      - name: shell wrapper syntax
+        if: runner.os != 'Windows'
+        run: bash -n lai.sh

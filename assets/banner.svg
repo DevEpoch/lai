@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4da3ff"/>
+      <stop offset="1" stop-color="#3fb96b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.28" cy="0.45" r="0.7">
+      <stop offset="0" stop-color="#4da3ff" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#4da3ff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="34" height="34" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.6" fill="#262b38"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="640" fill="#0d1017"/>
+  <rect width="1280" height="640" fill="url(#dots)"/>
+  <rect width="1280" height="640" fill="url(#glow)"/>
+
+  <!-- the project icon: brackets around an on-device neural core -->
+  <g transform="translate(96,192) scale(1.0)">
+    <rect width="256" height="256" rx="58" fill="#0d1017"/>
+    <rect width="256" height="256" rx="58" fill="none" stroke="#262b38" stroke-width="2"/>
+    <rect x="10" y="10" width="236" height="236" rx="50" fill="none"
+          stroke="url(#g)" stroke-width="6" opacity="0.35"/>
+    <path d="M98 76 L52 128 L98 180" fill="none" stroke="url(#g)"
+          stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M158 76 L204 128 L158 180" fill="none" stroke="url(#g)"
+          stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="128" cy="128" r="17" fill="url(#g)"/>
+    <circle cx="128" cy="128" r="30" fill="none" stroke="url(#g)"
+            stroke-width="5" opacity="0.45"/>
+    <g fill="url(#g)">
+      <circle cx="128" cy="83" r="7"/>
+      <circle cx="128" cy="173" r="7"/>
+      <circle cx="89" cy="106" r="7"/>
+      <circle cx="167" cy="106" r="7"/>
+      <circle cx="89" cy="150" r="7"/>
+      <circle cx="167" cy="150" r="7"/>
+    </g>
+  </g>
+
+  <!-- wordmark + tagline -->
+  <g font-family="'Cascadia Code','JetBrains Mono',Consolas,Menlo,monospace">
+    <text x="432" y="305" font-size="150" font-weight="700"
+          fill="url(#g)">lai</text>
+    <text x="436" y="366" font-size="34" fill="#d7dce6">the local AI programming environment</text>
+    <text x="436" y="412" font-size="23" fill="#8b93a7">plans, installs, and runs the right stack for your hardware</text>
+
+    <!-- feature chips -->
+    <g font-size="21">
+      <rect x="436" y="450" rx="17" width="345" height="40" fill="#161a24" stroke="#262b38"/>
+      <text x="458" y="477" fill="#d7dce6">Windows · Linux · macOS</text>
+      <rect x="797" y="450" rx="17" width="385" height="40" fill="#161a24" stroke="#262b38"/>
+      <text x="819" y="477" fill="#d7dce6">NVIDIA · AMD · Apple · CPU</text>
+      <rect x="436" y="502" rx="17" width="478" height="40" fill="#161a24" stroke="#262b38"/>
+      <text x="458" y="529" fill="#d7dce6">models · agents · RAG · dashboard</text>
+      <rect x="930" y="502" rx="17" width="268" height="40" fill="#161a24" stroke="url(#g)"/>
+      <text x="952" y="529" fill="url(#g)">no cloud required</text>
+    </g>
+  </g>
+
+  <!-- bottom accent -->
+  <rect x="0" y="630" width="1280" height="10" fill="url(#g)" opacity="0.85"/>
+</svg>

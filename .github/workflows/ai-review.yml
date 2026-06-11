@@ -1,0 +1,53 @@
+# AI review of pull requests using GitHub Models - GitHub's FREE inference
+# tier, authenticated with the built-in GITHUB_TOKEN (no API key needed).
+# Best-effort: if Models is unavailable for the repo/org, the job is skipped.
+name: ai-pr-review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  models: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect diff (truncated to fit free-tier limits)
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > pr.diff
+          head -c 60000 pr.diff > pr.trunc
+
+      - name: Ask GitHub Models for a review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          jq -n --rawfile diff pr.trunc '{
+            model: "openai/gpt-4o-mini",
+            messages: [
+              {role: "system", content: "You are a strict senior code reviewer. Report findings as [BUG|RISK|TEST|STYLE] file:line - problem, why it matters, concrete fix; most severe first. If clean, reply LGTM plus the biggest residual risk. Be brief; no praise."},
+              {role: "user", content: ("Review this diff:\n```diff\n" + $diff + "\n```")}
+            ]
+          }' > req.json
+          curl -sf https://models.github.ai/inference/chat/completions \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d @req.json | jq -r '.choices[0].message.content' > review.md
+          echo '---' >> review.md
+          echo '_Automated review via GitHub Models (free tier). A human still decides._' >> review.md
+
+      - name: Post the review comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s review.md ]; then
+            gh pr comment ${{ github.event.pull_request.number }} --body-file review.md
+          fi

@@ -1,0 +1,627 @@
+{
+  "catalog_version": "2026.06.11",
+  "_comment": [
+    "THE HARDWARE -> RECOMMENDATION TABLE. Edit this file freely, then run `lai plan`",
+    "to re-evaluate (and `lai models && lai config && lai restart` to apply).",
+    "models: registry of runnable GGUF models. fits_vram_gb = VRAM needed fully on GPU;",
+    "  hybrid_ram_gb = system RAM needed for MoE expert offload (moe models only);",
+    "  cpu_ok = acceptable speed on CPU alone. verify=true means the repo name should be",
+    "  checked on Hugging Face before relying on it (newer than this catalog's research).",
+    "tiers: first tier whose conditions match the detected hardware wins (top to bottom).",
+    "  Per-role defaults reference model ids; `lai plan` falls back to the best fitting",
+    "  alternative automatically if a default does not fit or is missing."
+  ],
+
+  "models": {
+    "qwen3-coder-30b-a3b": {
+      "name": "Qwen3-Coder-30B-A3B-Instruct",
+      "repo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+      "include": ["*Q4_K_M*"],
+      "disk_gb": 18.6,
+      "moe": true,
+      "roles": ["coder"],
+      "fits_vram_gb": 20,
+      "hybrid_ram_gb": 28,
+      "cpu_ok": true,
+      "why": "agent-trained MoE (3B active), 256K native ctx; the intelligence/speed king wherever it fits"
+    },
+    "qwen3-30b-a3b-thinking": {
+      "name": "Qwen3-30B-A3B-Thinking-2507",
+      "repo": "unsloth/Qwen3-30B-A3B-Thinking-2507-GGUF",
+      "include": ["*Q4_K_M*"],
+      "disk_gb": 18.6,
+      "moe": true,
+      "roles": ["thinker"],
+      "fits_vram_gb": 20,
+      "hybrid_ram_gb": 28,
+      "cpu_ok": true,
+      "why": "planning / architecture / hard debugging companion to the coder"
+    },
+    "devstral-small": {
+      "name": "Devstral-Small-2507 (24B)",
+      "repo": "unsloth/Devstral-Small-2507-GGUF",
+      "include": ["*Q4_K_M*"],
+      "disk_gb": 14.3,
+      "moe": false,
+      "roles": ["coder"],
+      "fits_vram_gb": 15,
+      "why": "dense 24B tuned specifically for coding agents (OpenHands); best dense pick at 16 GB"
+    },
+    "qwen2.5-coder-14b": {
+      "name": "Qwen2.5-Coder-14B-Instruct",
+      "repo": "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF",
+      "include": ["*q4_k_m*", "*Q4_K_M*"],
+      "disk_gb": 9.0,
+      "moe": false,
+      "roles": ["coder"],
+      "fits_vram_gb": 10,
+      "draft": "qwen2.5-coder-1.5b",
+      "why": "strongest dense coder that fits 12 GB VRAM (June 2026 sources also list a Qwen3-Coder-14B successor - check HF and update this entry); same-family 1.5B draft enables speculative decoding (+30-60%)"
+    },
+    "qwen2.5-coder-7b": {
+      "name": "Qwen2.5-Coder-7B-Instruct",
+      "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+      "include": ["*q4_k_m*", "*Q4_K_M*"],
+      "disk_gb": 4.7,
+      "moe": false,
+      "roles": ["coder"],
+      "fits_vram_gb": 6,
+      "cpu_ok": true,
+      "draft": "qwen2.5-coder-1.5b",
+      "why": "best coder for 8 GB VRAM / 16 GB Macs; 1.5B draft enables speculative decoding when fully on GPU"
+    },
+    "qwen3-4b": {
+      "name": "Qwen3-4B-Instruct-2507",
+      "repo": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+      "include": ["*Q4_K_M*"],
+      "disk_gb": 2.5,
+      "moe": false,
+      "roles": ["coder"],
+      "fits_vram_gb": 3,
+      "cpu_ok": true,
+      "why": "remarkably capable small generalist for low-spec machines"
+    },
+    "qwen3-coder-next": {
+      "name": "Qwen3-Coder-Next (80B-A3B class)",
+      "repo": "unsloth/Qwen3-Coder-Next-80B-A3B-Instruct-GGUF",
+      "include": ["*Q4_K_M*"],
+      "disk_gb": 45.0,
+      "moe": true,
+      "roles": ["coder"],
+      "fits_vram_gb": 48,
+      "hybrid_ram_gb": 64,
+      "verify": true,
+      "why": "near-frontier agentic coder (~58.7% SWE-bench Verified); hybrid on 24 GB GPU + 64 GB RAM, resident at 48 GB+"
+    },
+    "qwen3-vl-8b": {
+      "name": "Qwen3-VL-8B-Instruct",
+      "repo": "unsloth/Qwen3-VL-8B-Instruct-GGUF",
+      "include": ["*Q4_K_M*", "mmproj*"],
+      "disk_gb": 6.0,
+      "moe": false,
+      "mmproj": true,
+      "roles": ["vision"],
+      "fits_vram_gb": 7,
+      "why": "best open VL at this size for screenshots / diagrams / PDFs"
+    },
+    "qwen3-vl-4b": {
+      "name": "Qwen3-VL-4B-Instruct",
+      "repo": "unsloth/Qwen3-VL-4B-Instruct-GGUF",
+      "include": ["*Q4_K_M*", "mmproj*"],
+      "disk_gb": 3.5,
+      "moe": false,
+      "mmproj": true,
+      "roles": ["vision"],
+      "fits_vram_gb": 4,
+      "cpu_ok": true,
+      "why": "lighter vision option for small GPUs / 16 GB Macs"
+    },
+    "qwen2.5-coder-3b": {
+      "name": "Qwen2.5-Coder-3B-Instruct",
+      "repo": "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF",
+      "include": ["*q4_k_m*", "*Q4_K_M*"],
+      "disk_gb": 2.0,
+      "moe": false,
+      "roles": ["autocomplete"],
+      "fits_vram_gb": 3,
+      "why": "FIM-trained; the autocomplete sweet spot when VRAM allows"
+    },
+    "qwen2.5-coder-1.5b": {
+      "name": "Qwen2.5-Coder-1.5B-Instruct",
+      "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+      "include": ["*q4_k_m*", "*Q4_K_M*"],
+      "disk_gb": 1.1,
+      "moe": false,
+      "roles": ["autocomplete", "coder"],
+      "fits_vram_gb": 1.5,
+      "cpu_ok": true,
+      "why": "sub-100ms completions; also the last-resort coder on tiny machines"
+    },
+    "qwen3-embedding-0.6b": {
+      "name": "Qwen3-Embedding-0.6B",
+      "repo": "Qwen/Qwen3-Embedding-0.6B-GGUF",
+      "include": ["*Q8_0*", "*q8_0*"],
+      "disk_gb": 0.7,
+      "moe": false,
+      "roles": ["embeddings"],
+      "fits_vram_gb": 1,
+      "cpu_ok": true,
+      "pooling": "last",
+      "why": "powers repo semantic search (Qdrant); cheap enough to keep always-on"
+    }
+  },
+
+  "engines": {
+    "_comment": "asset regex patterns for the llama.cpp GitHub release, keyed by <platform>-<vendor-class>",
+    "windows-cuda":   {"patterns": ["bin-win.*cuda.*x64.*\\.zip$"], "exclude": "cudart", "cudart": "cudart.*win.*x64.*\\.zip$", "note": "NVIDIA CUDA build"},
+    "windows-vulkan": {"patterns": ["bin-win.*vulkan.*x64.*\\.zip$"], "note": "AMD/Intel GPUs on Windows run best on Vulkan"},
+    "windows-cpu":    {"patterns": ["bin-win.*cpu.*x64.*\\.zip$", "bin-win.*x64.*\\.zip$"], "note": "CPU-only build"},
+    "linux-cuda":     {"patterns": ["bin-ubuntu.*cuda.*x64.*\\.(zip|tar\\.gz)$", "bin-ubuntu.*x64.*\\.(zip|tar\\.gz)$"], "note": "if no CUDA asset is published, build from source with -DGGML_CUDA=ON"},
+    "linux-vulkan":   {"patterns": ["bin-ubuntu.*vulkan.*\\.(zip|tar\\.gz)$", "bin-ubuntu.*x64.*\\.(zip|tar\\.gz)$"], "note": "Vulkan works everywhere; a ROCm source build is ~10-20% faster on supported Radeons"},
+    "linux-cpu":      {"patterns": ["bin-ubuntu.*x64.*\\.(zip|tar\\.gz)$"], "note": "CPU-only"},
+    "mac-metal":      {"patterns": ["bin-macos-arm64.*\\.zip$", "bin-macos.*\\.zip$"], "note": "Metal is built in; MLX (LM Studio / mlx-lm) is ~10-25% faster but has no llama-swap equivalent - llama.cpp keeps one API everywhere"},
+    "llama_swap": {
+      "windows": ["windows.*amd64.*\\.zip$"],
+      "linux":   ["linux.*amd64.*\\.tar\\.gz$"],
+      "mac":     ["darwin.*arm64.*\\.tar\\.gz$", "darwin.*amd64.*\\.tar\\.gz$"]
+    }
+  },
+
+  "cloud": {
+    "_comment": "Curated best-value picks shown by `lai cloud list` (verify names/prices on the provider - this is editable data like everything else).",
+    "openrouter": {"recommended": [
+      {"id": "qwen/qwen3-coder:free", "why": "free tier - try cloud at zero cost"},
+      {"id": "deepseek/deepseek-v4", "why": "near-frontier coding, very cheap per token"},
+      {"id": "anthropic/claude-sonnet-4-6", "why": "top quality for the hardest reviews"}
+    ]},
+    "openai": {"recommended": [
+      {"id": "gpt-5-mini", "why": "cheap default for everyday cloud calls"},
+      {"id": "gpt-5", "why": "hard tasks only"}
+    ]},
+    "anthropic": {"recommended": [
+      {"id": "claude-haiku-4-5-20251001", "why": "fast + cheap default"},
+      {"id": "claude-sonnet-4-6", "why": "best coding quality per dollar"}
+    ]}
+  },
+
+  "usecases": {
+    "_comment": "Overlays applied on top of the hardware tier by `lai plan` (or the UI). Per role: enabled true/false and optional ctx override. Hardware still rules: an enabled role only activates if a model fits.",
+    "general": {
+      "label": "General / mixed development",
+      "overlay": {},
+      "extensions": [],
+      "notes": ["tier defaults, nothing changed"]
+    },
+    "web": {
+      "label": "Web & WordPress (PHP / JS / TS, themes, sites)",
+      "overlay": {
+        "vision": {"enabled": true},
+        "thinker": {"enabled": false},
+        "autocomplete": {"ctx": 16384}
+      },
+      "extensions": ["bmewburn.vscode-intelephense-client (PHP)", "dbaeumer.vscode-eslint", "bradlc.vscode-tailwindcss", "esbenp.prettier-vscode"],
+      "notes": ["vision on: design screenshots -> markup is a daily move", "autocomplete gets more context for long template files"]
+    },
+    "mobile": {
+      "label": "Mobile apps (Android / iOS / Flutter / React Native)",
+      "overlay": {
+        "vision": {"enabled": true, "ctx": 16384},
+        "thinker": {"enabled": true}
+      },
+      "extensions": ["Kotlin / Swift language servers via the platform IDEs", "Dart-Code.flutter (Flutter)", "msjsdiag.vscode-react-native"],
+      "notes": ["vision prioritized: UI mockups and screenshots are the main input", "heavy UI work is best in Android Studio/Xcode with this stack as the API backend"]
+    },
+    "systems": {
+      "label": "Systems & desktop (Go / Rust / C++)",
+      "overlay": {
+        "vision": {"enabled": false},
+        "thinker": {"enabled": true},
+        "coder": {"ctx": 65536}
+      },
+      "extensions": ["rust-lang.rust-analyzer", "golang.go", "llvm-vs-code-extensions.vscode-clangd", "vadimcn.vscode-lldb"],
+      "notes": ["vision off frees VRAM/disk", "coder context raised for cross-crate/package reasoning (capped by what the hardware allows)"]
+    },
+    "data-ml": {
+      "label": "Data science & ML (Python, notebooks)",
+      "overlay": {
+        "vision": {"enabled": true},
+        "thinker": {"enabled": true}
+      },
+      "extensions": ["ms-python.python", "ms-toolsai.jupyter", "charliermarsh.ruff"],
+      "notes": ["vision on: reading plots and notebook screenshots"]
+    },
+    "scripts": {
+      "label": "Scripts & DevOps (shell, automation, IaC)",
+      "overlay": {
+        "vision": {"enabled": false},
+        "thinker": {"enabled": false}
+      },
+      "extensions": ["ms-azuretools.vscode-docker", "hashicorp.terraform", "redhat.vscode-yaml"],
+      "notes": ["minimal footprint: coder + autocomplete + embeddings only - saves ~25 GB disk vs the full stack"]
+    }
+  },
+
+  "stacks": {
+    "_comment": "Project scaffolds for `lai new`. init_cmds use the ecosystem's own generator ({name} = sanitized project name, {python} = current interpreter); files are minimal seeds only where no generator exists. agents.* feed the generated AGENTS.md.",
+    "go-cli": {
+      "label": "Go command-line tool",
+      "usecase": "systems",
+      "toolchains": [{"bin": "go", "hint": "winget install GoLang.Go | brew install go | sudo apt install golang"}],
+      "init_cmds": [["go", "mod", "init", "{name}"]],
+      "files": {"main.go": "package main\n\nimport (\n\t\"flag\"\n\t\"fmt\"\n)\n\nfunc main() {\n\tname := flag.String(\"name\", \"world\", \"who to greet\")\n\tflag.Parse()\n\tfmt.Printf(\"hello, %s\\n\", *name)\n}\n"},
+      "agents": {"build": "go build ./...", "test": "go test ./...", "lint": "go vet ./...", "run": "go run ."},
+      "extensions": ["golang.go"],
+      "gitignore": ["bin/"],
+      "required_roles": ["coder", "thinker", "autocomplete", "embeddings"],
+      "min_ctx": 32768
+    },
+    "go-service": {
+      "label": "Go HTTP service / backend",
+      "usecase": "systems",
+      "toolchains": [{"bin": "go", "hint": "winget install GoLang.Go | brew install go | sudo apt install golang"}],
+      "init_cmds": [["go", "mod", "init", "{name}"]],
+      "files": {"main.go": "package main\n\nimport (\n\t\"log\"\n\t\"net/http\"\n)\n\nfunc main() {\n\tmux := http.NewServeMux()\n\tmux.HandleFunc(\"GET /healthz\", func(w http.ResponseWriter, r *http.Request) {\n\t\tw.Write([]byte(\"ok\"))\n\t})\n\tlog.Println(\"listening on :8000\")\n\tlog.Fatal(http.ListenAndServe(\":8000\", mux))\n}\n"},
+      "agents": {"build": "go build ./...", "test": "go test ./...", "lint": "go vet ./...", "run": "go run ."},
+      "extensions": ["golang.go"],
+      "gitignore": ["bin/"],
+      "required_roles": ["coder", "thinker", "autocomplete", "embeddings"],
+      "min_ctx": 32768
+    },
+    "rust-cli": {
+      "label": "Rust command-line tool",
+      "usecase": "systems",
+      "toolchains": [{"bin": "cargo", "hint": "install rustup: https://rustup.rs"}],
+      "init_cmds": [["cargo", "init", "--name", "{name}"]],
+      "files": {},
+      "agents": {"build": "cargo build", "test": "cargo test", "lint": "cargo clippy -- -D warnings && cargo fmt --check", "run": "cargo run"},
+      "extensions": ["rust-lang.rust-analyzer", "vadimcn.vscode-lldb"],
+      "gitignore": ["target/"],
+      "required_roles": ["coder", "thinker", "autocomplete", "embeddings"],
+      "min_ctx": 32768
+    },
+    "cpp-cmake": {
+      "label": "C++ project (CMake)",
+      "usecase": "systems",
+      "toolchains": [{"bin": "cmake", "hint": "winget install Kitware.CMake | brew install cmake | sudo apt install cmake build-essential"}],
+      "init_cmds": [],
+      "files": {
+        "CMakeLists.txt": "cmake_minimum_required(VERSION 3.20)\nproject({name} CXX)\nset(CMAKE_CXX_STANDARD 20)\nset(CMAKE_CXX_STANDARD_REQUIRED ON)\nadd_executable({name} src/main.cpp)\n",
+        "src/main.cpp": "#include <iostream>\n\nint main() {\n    std::cout << \"hello, world\\n\";\n    return 0;\n}\n"},
+      "agents": {"build": "cmake -B build && cmake --build build", "test": "ctest --test-dir build", "lint": "clang-tidy via your CI", "run": "./build/{name}"},
+      "extensions": ["llvm-vs-code-extensions.vscode-clangd", "ms-vscode.cmake-tools"],
+      "gitignore": ["build/"],
+      "required_roles": ["coder", "thinker", "autocomplete", "embeddings"],
+      "min_ctx": 32768
+    },
+    "web-vite": {
+      "label": "Web app (Vite + React + TypeScript)",
+      "usecase": "web",
+      "toolchains": [{"bin": "npm", "hint": "install Node.js: winget install OpenJS.NodeJS.LTS | brew install node | https://nodejs.org"}],
+      "init_cmds": [["npm", "create", "vite@latest", ".", "--", "--template", "react-ts"], ["npm", "install"]],
+      "files": {},
+      "agents": {"build": "npm run build", "test": "npm test", "lint": "npm run lint", "run": "npm run dev"},
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "node-api": {
+      "label": "Node.js API server (no framework)",
+      "usecase": "web",
+      "toolchains": [{"bin": "node", "hint": "winget install OpenJS.NodeJS.LTS | brew install node | https://nodejs.org"}],
+      "init_cmds": [["npm", "init", "-y"]],
+      "files": {"server.mjs": "import http from 'node:http';\n\nconst server = http.createServer((req, res) => {\n  if (req.url === '/healthz') {\n    res.writeHead(200, {'content-type': 'text/plain'});\n    return res.end('ok');\n  }\n  res.writeHead(200, {'content-type': 'application/json'});\n  res.end(JSON.stringify({hello: 'world'}));\n});\n\nserver.listen(8000, () => console.log('listening on :8000'));\n"},
+      "agents": {"build": "-", "test": "node --test", "lint": "npx eslint .", "run": "node server.mjs"},
+      "extensions": ["dbaeumer.vscode-eslint"],
+      "gitignore": ["node_modules/"],
+      "required_roles": ["coder", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "wordpress-theme": {
+      "label": "WordPress theme",
+      "usecase": "web",
+      "toolchains": [{"bin": "php", "hint": "optional but recommended for `php -l` lint: winget install PHP.PHP | brew install php | sudo apt install php-cli"}],
+      "init_cmds": [],
+      "files": {
+        "style.css": "/*\nTheme Name: {name}\nDescription: Custom theme scaffolded by lai\nVersion: 0.1.0\nText Domain: {name}\n*/\n",
+        "index.php": "<?php get_header(); ?>\n<main>\n  <?php if (have_posts()) : while (have_posts()) : the_post(); ?>\n    <article><h2><?php the_title(); ?></h2><?php the_content(); ?></article>\n  <?php endwhile; endif; ?>\n</main>\n<?php get_footer(); ?>\n",
+        "functions.php": "<?php\nadd_action('wp_enqueue_scripts', function () {\n    wp_enqueue_style('{name}-style', get_stylesheet_uri());\n});\nadd_theme_support('title-tag');\nadd_theme_support('post-thumbnails');\n",
+        "header.php": "<!doctype html>\n<html <?php language_attributes(); ?>>\n<head>\n<meta charset=\"<?php bloginfo('charset'); ?>\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<?php wp_head(); ?>\n</head>\n<body <?php body_class(); ?>>\n",
+        "footer.php": "<?php wp_footer(); ?>\n</body>\n</html>\n"},
+      "agents": {"build": "-", "test": "php -l *.php", "lint": "phpcs --standard=WordPress . (if installed)", "run": "copy the theme folder into wp-content/themes/ of a local WordPress"},
+      "extensions": ["bmewburn.vscode-intelephense-client"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "flutter-app": {
+      "label": "Mobile app (Flutter, Android + iOS)",
+      "usecase": "mobile",
+      "toolchains": [{"bin": "flutter", "hint": "https://docs.flutter.dev/get-started/install"}],
+      "init_cmds": [["flutter", "create", "--project-name", "{name}", "."]],
+      "files": {},
+      "agents": {"build": "flutter build apk --debug", "test": "flutter test", "lint": "flutter analyze", "run": "flutter run"},
+      "extensions": ["Dart-Code.flutter"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "thinker", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "web-next": {
+      "label": "Web app (Next.js + TypeScript)",
+      "usecase": "web",
+      "toolchains": [{"bin": "npm", "hint": "install Node.js: winget install OpenJS.NodeJS.LTS | brew install node"}],
+      "init_cmds": [["npx", "--yes", "create-next-app@latest", ".", "--ts", "--eslint", "--app", "--no-tailwind", "--no-src-dir", "--use-npm", "--yes"]],
+      "files": {},
+      "agents": {"build": "npm run build", "test": "npm test", "lint": "npm run lint", "run": "npm run dev"},
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "python-api": {
+      "label": "Python API server (FastAPI)",
+      "usecase": "web",
+      "toolchains": [{"bin": "python", "hint": "already present (lai runs on it)"}],
+      "init_cmds": [],
+      "files": {
+        "pyproject.toml": "[project]\nname = \"{name}\"\nversion = \"0.1.0\"\nrequires-python = \">=3.10\"\ndependencies = [\"fastapi\", \"uvicorn[standard]\"]\n\n[tool.ruff]\nline-length = 100\n",
+        "app/__init__.py": "",
+        "app/main.py": "from fastapi import FastAPI\n\napp = FastAPI(title=\"{name}\")\n\n\n@app.get(\"/healthz\")\ndef healthz() -> dict:\n    return {\"status\": \"ok\"}\n",
+        "tests/test_smoke.py": "from fastapi.testclient import TestClient\n\nfrom app.main import app\n\n\ndef test_healthz():\n    assert TestClient(app).get('/healthz').json() == {'status': 'ok'}\n"},
+      "agents": {"build": "-", "test": "pytest", "lint": "ruff check .", "run": "uvicorn app.main:app --reload"},
+      "extensions": ["ms-python.python", "charliermarsh.ruff"],
+      "gitignore": [".venv/", "__pycache__/"],
+      "required_roles": ["coder", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "dotnet-api": {
+      "label": "C# / .NET web API",
+      "usecase": "web",
+      "toolchains": [{"bin": "dotnet", "hint": "winget install Microsoft.DotNet.SDK.8 | brew install dotnet | https://dot.net"}],
+      "init_cmds": [["dotnet", "new", "webapi"]],
+      "files": {},
+      "agents": {"build": "dotnet build", "test": "dotnet test", "lint": "dotnet format --verify-no-changes", "run": "dotnet run"},
+      "extensions": ["ms-dotnettools.csdevkit"],
+      "gitignore": ["bin/", "obj/"],
+      "required_roles": ["coder", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "java-gradle": {
+      "label": "Java application (Gradle)",
+      "usecase": "systems",
+      "toolchains": [{"bin": "gradle", "hint": "winget install Gradle.Gradle | brew install gradle | sdkman: sdk install gradle"}],
+      "init_cmds": [["gradle", "init", "--type", "java-application", "--dsl", "kotlin", "--use-defaults", "--no-daemon"]],
+      "files": {},
+      "agents": {"build": "./gradlew build", "test": "./gradlew test", "lint": "./gradlew check", "run": "./gradlew run"},
+      "extensions": ["vscjava.vscode-java-pack"],
+      "gitignore": [".gradle/", "build/"],
+      "required_roles": ["coder", "thinker", "autocomplete", "embeddings"],
+      "min_ctx": 32768
+    },
+    "php-laravel": {
+      "label": "PHP web app (Laravel)",
+      "usecase": "web",
+      "toolchains": [{"bin": "composer", "hint": "https://getcomposer.org (needs PHP 8.2+)"}],
+      "init_cmds": [["composer", "create-project", "laravel/laravel", "."]],
+      "files": {},
+      "agents": {"build": "-", "test": "php artisan test", "lint": "./vendor/bin/pint --test", "run": "php artisan serve"},
+      "extensions": ["bmewburn.vscode-intelephense-client"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "tauri-desktop": {
+      "label": "Desktop app (Tauri: Rust + web UI)",
+      "usecase": "systems",
+      "toolchains": [{"bin": "npm", "hint": "Node.js: winget install OpenJS.NodeJS.LTS"}, {"bin": "cargo", "hint": "install rustup: https://rustup.rs"}],
+      "init_cmds": [["npm", "create", "tauri-app@latest", ".", "--", "--yes", "--template", "vanilla-ts", "--manager", "npm"]],
+      "files": {},
+      "agents": {"build": "npm run tauri build", "test": "cargo test (in src-tauri)", "lint": "cargo clippy", "run": "npm run tauri dev"},
+      "extensions": ["tauri-apps.tauri-vscode", "rust-lang.rust-analyzer"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "thinker", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "python-ml": {
+      "label": "Python data science / ML project",
+      "usecase": "data-ml",
+      "toolchains": [{"bin": "python", "hint": "already present (lai runs on it)"}],
+      "init_cmds": [],
+      "files": {
+        "pyproject.toml": "[project]\nname = \"{name}\"\nversion = \"0.1.0\"\nrequires-python = \">=3.10\"\ndependencies = []\n\n[tool.ruff]\nline-length = 100\n",
+        "src/{name}/__init__.py": "",
+        "src/{name}/main.py": "def main() -> None:\n    print(\"hello, world\")\n\n\nif __name__ == \"__main__\":\n    main()\n",
+        "tests/test_smoke.py": "def test_smoke():\n    assert True\n"},
+      "agents": {"build": "-", "test": "pytest", "lint": "ruff check .", "run": "python -m {name}.main"},
+      "extensions": ["ms-python.python", "ms-toolsai.jupyter", "charliermarsh.ruff"],
+      "gitignore": [".venv/", "__pycache__/", "*.egg-info/"],
+      "required_roles": ["coder", "thinker", "vision", "embeddings"],
+      "min_ctx": 16384
+    }
+  },
+
+  "tiers": [
+    {
+      "id": "apple-64gb", "label": "Apple Silicon, 48+ GB unified memory",
+      "platform": ["mac"], "vendor": ["apple"], "min_ram_gb": 48,
+      "defaults": {
+        "coder":        {"model": "qwen3-coder-30b-a3b", "mode": "gpu", "ctx": 65536, "kv": "q8_0"},
+        "thinker":      {"model": "qwen3-30b-a3b-thinking", "mode": "gpu", "ctx": 32768},
+        "vision":       {"model": "qwen3-vl-8b", "mode": "gpu", "ctx": 16384},
+        "autocomplete": {"model": "qwen2.5-coder-3b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "gpu"}
+      },
+      "targets": {"pp": 300, "tg": 50},
+      "notes": ["96/128 GB Macs: try qwen3-coder-next via `lai set coder qwen3-coder-next`"]
+    },
+    {
+      "id": "apple-32gb", "label": "Apple Silicon, 28-48 GB unified memory",
+      "platform": ["mac"], "vendor": ["apple"], "min_ram_gb": 28,
+      "defaults": {
+        "coder":        {"model": "qwen3-coder-30b-a3b", "mode": "gpu", "ctx": 32768, "kv": "q8_0"},
+        "thinker":      {"model": null},
+        "vision":       {"model": "qwen3-vl-4b", "mode": "gpu", "ctx": 8192},
+        "autocomplete": {"model": "qwen2.5-coder-1.5b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 250, "tg": 40},
+      "notes": ["the 30B MoE leaves little headroom at 32 GB - close heavy apps while it runs"]
+    },
+    {
+      "id": "apple-16gb", "label": "Apple Silicon, 14-28 GB unified memory",
+      "platform": ["mac"], "vendor": ["apple"], "min_ram_gb": 14,
+      "defaults": {
+        "coder":        {"model": "qwen2.5-coder-7b", "mode": "gpu", "ctx": 16384},
+        "thinker":      {"model": null},
+        "vision":       {"model": null},
+        "autocomplete": {"model": "qwen2.5-coder-1.5b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 200, "tg": 25},
+      "notes": ["24 GB Macs can try qwen2.5-coder-14b via `lai set coder qwen2.5-coder-14b`"]
+    },
+    {
+      "id": "apple-8gb", "label": "Apple Silicon, under 14 GB unified memory",
+      "platform": ["mac"], "vendor": ["apple"], "min_ram_gb": 0,
+      "defaults": {
+        "coder":        {"model": "qwen3-4b", "mode": "gpu", "ctx": 8192},
+        "thinker":      {"model": null},
+        "vision":       {"model": null},
+        "autocomplete": {"model": "qwen2.5-coder-1.5b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 150, "tg": 20},
+      "notes": ["8 GB is below comfortable - expect to close other apps"]
+    },
+    {
+      "id": "gpu-48gb", "label": "NVIDIA/AMD GPU, 40+ GB VRAM",
+      "platform": ["windows", "linux"], "vendor": ["nvidia", "amd"], "min_vram_gb": 40,
+      "defaults": {
+        "coder":        {"model": "qwen3-coder-30b-a3b", "mode": "gpu", "ctx": 131072, "kv": "q8_0"},
+        "thinker":      {"model": "qwen3-30b-a3b-thinking", "mode": "gpu", "ctx": 32768},
+        "vision":       {"model": "qwen3-vl-8b", "mode": "gpu", "ctx": 16384},
+        "autocomplete": {"model": "qwen2.5-coder-3b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "gpu"}
+      },
+      "targets": {"pp": 2000, "tg": 100},
+      "notes": ["serious option: qwen3-coder-next fully resident; also consider vLLM for parallel agents at this scale"]
+    },
+    {
+      "id": "gpu-24gb", "label": "NVIDIA/AMD GPU, 20-40 GB VRAM",
+      "platform": ["windows", "linux"], "vendor": ["nvidia", "amd"], "min_vram_gb": 20,
+      "defaults": {
+        "coder":        {"model": "qwen3-coder-30b-a3b", "mode": "gpu", "ctx": 65536, "kv": "q8_0", "longctx": 131072},
+        "thinker":      {"model": "qwen3-30b-a3b-thinking", "mode": "gpu", "ctx": 32768},
+        "vision":       {"model": "qwen3-vl-8b", "mode": "gpu", "ctx": 16384},
+        "autocomplete": {"model": "qwen2.5-coder-3b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "gpu"}
+      },
+      "targets": {"pp": 1500, "tg": 90},
+      "notes": ["with 64+ GB system RAM, qwen3-coder-next runs hybrid at ~15-25 tok/s - near-frontier quality"]
+    },
+    {
+      "id": "gpu-16gb", "label": "NVIDIA/AMD GPU, 14-20 GB VRAM",
+      "platform": ["windows", "linux"], "vendor": ["nvidia", "amd"], "min_vram_gb": 14,
+      "defaults": {
+        "coder":        {"model": "devstral-small", "mode": "gpu", "ctx": 16384, "kv": "q8_0"},
+        "thinker":      {"model": "qwen3-30b-a3b-thinking", "mode": "hybrid", "ctx": 16384, "kv": "q8_0"},
+        "vision":       {"model": "qwen3-vl-8b", "mode": "gpu", "ctx": 8192},
+        "autocomplete": {"model": "qwen2.5-coder-3b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 800, "tg": 35},
+      "notes": ["alternative: qwen3-coder-30b-a3b hybrid is faster but needs 28+ GB system RAM"]
+    },
+    {
+      "id": "gpu-12gb", "label": "NVIDIA/AMD GPU, 10-14 GB VRAM",
+      "platform": ["windows", "linux"], "vendor": ["nvidia", "amd"], "min_vram_gb": 10,
+      "defaults": {
+        "coder":        {"model": "qwen2.5-coder-14b", "mode": "gpu", "ctx": 16384, "kv": "q8_0"},
+        "thinker":      {"model": null},
+        "vision":       {"model": "qwen3-vl-4b", "mode": "gpu", "ctx": 8192},
+        "autocomplete": {"model": "qwen2.5-coder-1.5b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 600, "tg": 20},
+      "notes": ["with 28+ GB RAM the MoE hybrid beats the dense 14B: `lai set coder qwen3-coder-30b-a3b`"]
+    },
+    {
+      "id": "gpu-8gb-bigram", "label": "NVIDIA/AMD GPU 6-10 GB VRAM + 28+ GB RAM",
+      "platform": ["windows", "linux"], "vendor": ["nvidia", "amd"], "min_vram_gb": 5, "min_ram_gb": 28,
+      "defaults": {
+        "coder":        {"model": "qwen3-coder-30b-a3b", "mode": "hybrid", "ctx": 32768, "kv": "q8_0"},
+        "thinker":      {"model": null},
+        "vision":       {"model": "qwen3-vl-8b", "mode": "gpu", "ctx": 8192, "ngl": 20},
+        "autocomplete": {"model": "qwen2.5-coder-1.5b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 100, "tg": 8},
+      "notes": ["MoE expert-offload tier: 30B-class intelligence at ~8-13 tok/s; agents work but are slow", "thinker off by default: swapping two 18.6 GB models through 32 GB RAM evicts each other (30-60 s per swap) - re-enable with `lai set thinker qwen3-30b-a3b-thinking` if you plan in long uninterrupted sessions"]
+    },
+    {
+      "id": "gpu-8gb", "label": "NVIDIA/AMD GPU, 6-10 GB VRAM",
+      "platform": ["windows", "linux"], "vendor": ["nvidia", "amd"], "min_vram_gb": 6,
+      "defaults": {
+        "coder":        {"model": "qwen2.5-coder-7b", "mode": "gpu", "ctx": 8192, "kv": "q8_0"},
+        "thinker":      {"model": null},
+        "vision":       {"model": "qwen3-vl-4b", "mode": "gpu", "ctx": 4096},
+        "autocomplete": {"model": "qwen2.5-coder-1.5b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 500, "tg": 30},
+      "notes": ["a RAM upgrade to 32 GB unlocks the much smarter MoE hybrid tier"]
+    },
+    {
+      "id": "gpu-low", "label": "NVIDIA/AMD GPU, 3-6 GB VRAM",
+      "platform": ["windows", "linux"], "vendor": ["nvidia", "amd"], "min_vram_gb": 3,
+      "defaults": {
+        "coder":        {"model": "qwen3-4b", "mode": "gpu", "ctx": 8192},
+        "thinker":      {"model": null},
+        "vision":       {"model": null},
+        "autocomplete": {"model": "qwen2.5-coder-1.5b", "mode": "gpu"},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 300, "tg": 25},
+      "notes": []
+    },
+    {
+      "id": "cpu-32gb", "label": "No usable GPU, 28+ GB RAM",
+      "platform": ["windows", "linux"], "vendor": ["none"], "min_ram_gb": 28,
+      "defaults": {
+        "coder":        {"model": "qwen3-coder-30b-a3b", "mode": "cpu", "ctx": 16384, "kv": "q8_0"},
+        "thinker":      {"model": null},
+        "vision":       {"model": null},
+        "autocomplete": {"model": null},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 30, "tg": 5},
+      "notes": ["MoE on CPU is usable for chat (~5-8 tok/s) but too slow for agents; autocomplete disabled (latency)"]
+    },
+    {
+      "id": "cpu-16gb", "label": "No usable GPU, 12-28 GB RAM",
+      "platform": ["windows", "linux"], "vendor": ["none"], "min_ram_gb": 12,
+      "defaults": {
+        "coder":        {"model": "qwen3-4b", "mode": "cpu", "ctx": 8192},
+        "thinker":      {"model": null},
+        "vision":       {"model": null},
+        "autocomplete": {"model": null},
+        "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
+      },
+      "targets": {"pp": 25, "tg": 8},
+      "notes": []
+    },
+    {
+      "id": "cpu-min", "label": "No usable GPU, under 12 GB RAM",
+      "platform": ["windows", "linux"], "vendor": ["none"], "min_ram_gb": 0,
+      "defaults": {
+        "coder":        {"model": "qwen2.5-coder-1.5b", "mode": "cpu", "ctx": 4096},
+        "thinker":      {"model": null},
+        "vision":       {"model": null},
+        "autocomplete": {"model": null},
+        "embeddings":   {"model": null}
+      },
+      "targets": {"pp": 20, "tg": 10},
+      "notes": ["below the comfort floor for local coding AI - consider this a demo configuration"]
+    }
+  ]
+}

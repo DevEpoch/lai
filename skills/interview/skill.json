@@ -1,0 +1,4 @@
+{
+  "description": "Spec-first mode: asks numbered clarifying questions until requirements are unambiguous, writes the spec to docs/specs/, then hands off to Code mode.",
+  "mode": "mode.json"
+}

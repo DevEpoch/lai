@@ -1,0 +1,4 @@
+{
+  "description": "Code-review mode: reads diffs and files, reports findings by severity with file:line references; never edits code itself.",
+  "mode": "mode.json"
+}
