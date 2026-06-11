@@ -2168,3 +2168,65 @@ def cmd_doctor(args):
     print()
     ok(f"support bundle (no secrets): {out}")
     info("attach it to a GitHub issue - it answers the first ten questions")
+
+
+def cmd_storage(args):
+    """Show or change where models are stored (moves existing ones)."""
+    cur = MODELS
+    new_path = getattr(args, "path", None)
+    if not new_path:
+        size = sum(f.stat().st_size for f in cur.rglob("*")
+                   if f.is_file()) / 2 ** 30 if cur.exists() else 0.0
+        free = shutil.disk_usage(cur if cur.exists()
+                                 else cur.parent).free / 2 ** 30
+        info(f"models live at: {cur}")
+        info(f"used: {size:.1f} GB | free on that drive: {free:.0f} GB")
+        info("change it: lai storage <new-path>  "
+             "(--no-move to just point at existing models)")
+        return
+    new = Path(new_path).expanduser().resolve()
+    if new == cur:
+        ok(f"models already live at {new}")
+        return
+    move = not getattr(args, "no_move", False) and cur.exists() \
+        and any(cur.iterdir())
+    free = shutil.disk_usage(new.parent if not new.exists()
+                             else new).free / 2 ** 30
+    if not confirm(
+            f"set model storage to {new}"
+            + (f" and MOVE everything from {cur}" if move else "")
+            + f"? (free there: {free:.0f} GB; the stack and any running "
+            "download will be stopped first)"):
+        return
+    try:
+        cmd_stop(args)
+    except SystemExit:
+        pass
+    dlm = RUN / "download.pid"
+    if dlm.exists():
+        try:
+            pid = int(dlm.read_text().strip())
+            if pid_alive(pid):
+                info("pausing the running download (it resumes after)")
+                _kill(pid)
+        except (ValueError, OSError):
+            pass
+        dlm.unlink(missing_ok=True)
+    new.mkdir(parents=True, exist_ok=True)
+    if move:
+        for item in sorted(cur.iterdir()):
+            dest = new / item.name
+            if dest.exists():
+                warn(f"{item.name}: already exists at the target - "
+                     "left in place")
+                continue
+            info(f"moving {item.name} ...")
+            shutil.move(str(item), str(dest))
+    s = load_json(STATE / "settings.json") or {}
+    s["models_dir"] = str(new)
+    save_text(STATE / "settings.json", json.dumps(s, indent=2))
+    info("regenerating runtime config against the new location...")
+    subprocess.run([sys.executable, str(ROOT / "lai.py"), "config"])
+    ok(f"models now live at {new}")
+    info("next: lai start  |  resume downloads: lai models  "
+        "(both pick up the new path automatically)")

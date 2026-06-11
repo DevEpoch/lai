@@ -33,6 +33,7 @@ anywhere: python lai.py <command> [--yes]
 | `selftest` | offline test suite (36 unittest cases incl. live API integration) |
 | `doctor` | full diagnosis + support zip (logs + state, never secrets) |
 | `mirror [--set URL]` | speed-test HF mirrors (catalog hf_mirrors); retries rotate mirrors |
+| `storage [path] [--no-move]` | show/relocate the models directory; moves models, repoints downloads + config |
 | `setup` | guided install: ports check -> plan -> engines -> models -> config -> IDE -> docker -> start |
 | `plan [--use-case X] [--vram-gb N]` | detect hardware, match tier, apply use-case overlay, review/edit, save to state/choices.json |
 | `choices` | show current per-role model selections + fitting alternatives |

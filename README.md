@@ -172,6 +172,9 @@ lai cloud add openrouter   # OPTIONAL cloud fallback (OpenRouter/OpenAI/Anthropi
                            #   used only via or:/oa:/an: model prefixes - local stays default
 lai info                # one-screen summary of the entire environment
 lai doctor              # full diagnosis + support zip (logs + state, never secrets)
+lai storage <path>      # move ALL models to another drive/folder - downloads and
+                        #   the runtime config follow automatically (--no-move to
+                        #   point at an existing/shared model folder)
 lai mirror              # speed-test HF mirrors; downloads rotate mirrors on retries
                         #   (downloads are byte-resumable through stalls, kills, reboots)
 lai catalog --update    # pull the latest published recommendation table (diff + approval)

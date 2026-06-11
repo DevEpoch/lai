@@ -37,7 +37,18 @@ ROOT = Path(__file__).resolve().parent.parent
 
 TOOLS = ROOT / "tools"
 
-MODELS = ROOT / "models"
+def _models_dir_at_start():
+    # NOTE: read directly (load_json is defined later); set via `lai storage`
+    try:
+        cfg = json.loads((ROOT / "state" / "settings.json")
+                         .read_text(encoding="utf-8"))
+        d = cfg.get("models_dir")
+        return Path(d) if d else ROOT / "models"
+    except (OSError, ValueError):
+        return ROOT / "models"
+
+
+MODELS = _models_dir_at_start()
 
 CONFIG = ROOT / "config"
 

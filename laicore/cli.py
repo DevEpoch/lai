@@ -60,6 +60,8 @@ Commands:
   cloud      add/remove OpenRouter/OpenAI/Anthropic keys - explicit-use
              fallbacks via or:/oa:/an: model prefixes; local stays default
   hftoken    store a free Hugging Face token (faster model downloads)
+  storage    show/change where models are stored; moving relocates all
+             models, future downloads, and the runtime config with it
   mirror     speed-test Hugging Face mirrors and use the fastest one;
              downloads also rotate mirrors automatically between retries
   ports      show/set service ports; `ports check --fix` finds conflicts
@@ -128,7 +130,7 @@ def main():
         "gate": cmd_gate, "skill": cmd_skill, "git": cmd_git,
         "connect": cmd_connect, "share": cmd_share, "tune": cmd_tune,
         "docs": cmd_docs, "chat": cmd_chat, "shortcut": cmd_shortcut,
-        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh, "selftest": cmd_selftest, "mirror": cmd_mirror, "doctor": cmd_doctor,
+        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh, "selftest": cmd_selftest, "mirror": cmd_mirror, "doctor": cmd_doctor, "storage": cmd_storage,
         "vscode": cmd_vscode,
     }
     for name in commands:
@@ -215,6 +217,13 @@ def main():
             sp.add_argument("value", nargs="?", default=None)
             sp.add_argument("--fix", action="store_true",
                             help="(check) move conflicting ports to free ones")
+        if name == "storage":
+            sp.add_argument("path", nargs="?", default=None,
+                            help="new models directory (omit to show)")
+            sp.add_argument("--no-move", action="store_true",
+                            dest="no_move",
+                            help="point at the path without moving "
+                                 "existing models (e.g. a shared drive)")
         if name == "mirror":
             sp.add_argument("--set", dest="set_url", default=None,
                             help="use this endpoint without testing")
