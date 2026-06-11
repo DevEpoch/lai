@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 import unittest
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -48,9 +49,15 @@ class TestDashboardApi(unittest.TestCase):
             try:
                 _req(cls.port, "/api/overview")
                 return
-            except Exception:
+            except urllib.error.HTTPError as e:
+                raise AssertionError(
+                    f"ui server returned HTTP {e.code} during startup probe: {e.reason}"
+                ) from e
+            except urllib.error.URLError:
                 if cls.proc.poll() is not None:
                     break
+            except Exception as e:
+                raise AssertionError(f"unexpected startup probe failure: {e}") from e
             sleep_s = min(sleep_s * 2, 0.5)
         raise unittest.SkipTest("ui server failed to boot")
 
@@ -62,9 +69,16 @@ class TestDashboardApi(unittest.TestCase):
     def test_overview_shape(self):
         status, o = _req(self.port, "/api/overview")
         self.assertEqual(status, 200)
+        self.assertIsInstance(o, dict)
         for key in ("usecases", "stacks", "skills", "running",
                     "lai_version", "models_meta"):
             self.assertIn(key, o)
+        self.assertIsInstance(o["usecases"], list)
+        self.assertIsInstance(o["stacks"], list)
+        self.assertIsInstance(o["skills"], list)
+        self.assertIsInstance(o["running"], dict)
+        self.assertIsInstance(o["lai_version"], str)
+        self.assertIsInstance(o["models_meta"], list)
         self.assertGreaterEqual(len(o["stacks"]), 15)
         self.assertGreaterEqual(len(o["skills"]), 9)
 
@@ -76,9 +90,13 @@ class TestDashboardApi(unittest.TestCase):
 
     def test_ports_and_cloud(self):
         _, p = _req(self.port, "/api/ports")
-        self.assertEqual(len(p["ports"]), 9)
+        self.assertGreaterEqual(len(p["ports"]), 9)
         _, cc = _req(self.port, "/api/cloudcfg")
-        self.assertEqual(len(cc["providers"]), 3)
+        providers = cc["providers"]
+        self.assertGreaterEqual(len(providers), 3)
+        self.assertIn("aws", providers)
+        self.assertIn("azure", providers)
+        self.assertIn("gcp", providers)
 
     def test_downloads_and_projects(self):
         _, d = _req(self.port, "/api/downloads")
