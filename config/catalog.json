@@ -1,5 +1,5 @@
 {
-  "catalog_version": "2026.06.11",
+  "catalog_version": "2026.06.11b",
   "_comment": [
     "THE HARDWARE -> RECOMMENDATION TABLE. Edit this file freely, then run `lai plan`",
     "to re-evaluate (and `lai models && lai config && lai restart` to apply).",
@@ -80,6 +80,41 @@
       "fits_vram_gb": 3,
       "cpu_ok": true,
       "why": "remarkably capable small generalist for low-spec machines"
+    },
+    "gemma-4-26b-a4b": {
+      "name": "Gemma 4 26B-A4B (Google)",
+      "repo": "unsloth/gemma-4-26b-a4b-it-GGUF",
+      "include": ["*Q4_K_M*"],
+      "disk_gb": 15.5,
+      "moe": true,
+      "roles": ["coder", "thinker"],
+      "fits_vram_gb": 17,
+      "hybrid_ram_gb": 26,
+      "cpu_ok": true,
+      "why": "strongest local GENERALIST of mid-2026 (LiveCodeBench ~80, AIME ~89); 4B-active MoE = same hybrid trick as the Qwen coder. Less agent/tool-call specialized and 128K ctx vs Qwen's 256K - compare on YOUR tasks: lai bench --quality"
+    },
+    "gemma-4-12b": {
+      "name": "Gemma 4 12B (Google)",
+      "repo": "unsloth/gemma-4-12b-it-GGUF",
+      "include": ["*Q4_K_M*"],
+      "disk_gb": 7.5,
+      "moe": false,
+      "roles": ["coder", "thinker"],
+      "fits_vram_gb": 9,
+      "cpu_ok": true,
+      "why": "best dense generalist in the 10-12 GB class (LiveCodeBench ~72); strong alternative to the 14B coder when you want reasoning + code in one model"
+    },
+    "deepseek-v4-flash": {
+      "name": "DeepSeek V4-Flash (284B-A13B)",
+      "repo": "unsloth/DeepSeek-V4-Flash-GGUF",
+      "include": ["*Q4_K_M*"],
+      "disk_gb": 158.0,
+      "moe": true,
+      "roles": ["coder"],
+      "fits_vram_gb": 170,
+      "hybrid_ram_gb": 192,
+      "verify": true,
+      "why": "frontier-class open coding (~80 SWE-bench Verified) for multi-GPU rigs (2x 96 GB class); gated repo - accept the license on HF first"
     },
     "qwen3-coder-next": {
       "name": "Qwen3-Coder-Next (80B-A3B class)",
@@ -171,7 +206,8 @@
     "_comment": "Curated best-value picks shown by `lai cloud list` (verify names/prices on the provider - this is editable data like everything else).",
     "openrouter": {"recommended": [
       {"id": "qwen/qwen3-coder:free", "why": "free tier - try cloud at zero cost"},
-      {"id": "deepseek/deepseek-v4", "why": "near-frontier coding, very cheap per token"},
+      {"id": "deepseek/deepseek-v4-flash", "why": "near-frontier coding (~80 SWE-V) at ~$0.14/$0.28 per M - the value king"},
+      {"id": "minimax/minimax-m3", "why": "top open SWE-bench Pro, 1M context, multimodal - for huge-repo questions"},
       {"id": "anthropic/claude-sonnet-4-6", "why": "top quality for the hardest reviews"}
     ]},
     "openai": {"recommended": [
@@ -517,7 +553,7 @@
         "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "gpu"}
       },
       "targets": {"pp": 1500, "tg": 90},
-      "notes": ["with 64+ GB system RAM, qwen3-coder-next runs hybrid at ~15-25 tok/s - near-frontier quality"]
+      "notes": ["with 64+ GB system RAM, qwen3-coder-next runs hybrid at ~15-25 tok/s - near-frontier quality", "gemma-4-26b-a4b fits fully resident here too - the best generalist alternative; compare with lai bench --quality"]
     },
     {
       "id": "gpu-16gb", "label": "NVIDIA/AMD GPU, 14-20 GB VRAM",
@@ -543,7 +579,7 @@
         "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "cpu"}
       },
       "targets": {"pp": 600, "tg": 20},
-      "notes": ["with 28+ GB RAM the MoE hybrid beats the dense 14B: `lai set coder qwen3-coder-30b-a3b`"]
+      "notes": ["with 28+ GB RAM the MoE hybrid beats the dense 14B: `lai set coder qwen3-coder-30b-a3b`", "gemma-4-12b is the strongest generalist at this size: `lai set coder gemma-4-12b`"]
     },
     {
       "id": "gpu-8gb-bigram", "label": "NVIDIA/AMD GPU 6-10 GB VRAM + 28+ GB RAM",

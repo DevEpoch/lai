@@ -91,3 +91,36 @@ never auto-pick it, only offer it.
 - [Best local LLMs for 8/16/32 GB memory (Micro Center)](https://www.microcenter.com/site/mc-news/article/best-local-llms-8gb-16gb-32gb-memory-guide.aspx)
 - [Best local coding LLMs 2026: Qwen vs DeepSeek vs Llama (PromptQuorum)](https://www.promptquorum.com/local-llms/best-local-llms-for-coding)
 - [Open-weight coding models 2026 (Kilo)](https://kilo.ai/open-source-models)
+
+## Research addendum (2026-06-11): Gemma 4 and the frontier shelf
+
+**Gemma 4 verdict - included.** Google's Gemma 4 26B-A4B (MoE, ~4B active,
+~15 GB Q4) is the strongest local GENERALIST of mid-2026: LiveCodeBench ~80,
+AIME ~89, and the same hybrid CPU-offload economics as our Qwen coder. It is
+now in the catalog as `gemma-4-26b-a4b` (coder + thinker roles) plus the
+dense `gemma-4-12b` for the 10-12 GB class. It does NOT displace
+Qwen3-Coder-30B-A3B as the coder default: Qwen remains agent/tool-call
+specialized with 256K context (vs 128K) and a SWE-bench-style lineage, which
+is what agentic coding lives on - LiveCodeBench measures competitive
+programming, not agent workflows. If your work is reasoning-heavy, run
+`lai bench --quality` against both and let the numbers decide; switching is
+one `lai set coder gemma-4-26b-a4b`.
+
+**The frontier shelf (too big for the tiers, real nonetheless):** mid-2026
+open-weights leaders are DeepSeek V4-Pro (1.6T/A49B, ~80.6 SWE-V), MiniMax M3
+(top open SWE-bench Pro 59.0, 1M ctx, multimodal), Kimi K2.6 (1T/A32B, ~640 GB
+VRAM), GLM-5.1 (754B, ~487 GB Q4). Only DeepSeek **V4-Flash** (284B/A13B,
+~158 GB Q4, 2x 96 GB-class GPUs) is plausibly self-hostable and is in the
+catalog as a verify-flagged entry. The rest are best consumed through the
+cloud fallback - the OpenRouter offers now point at V4-Flash (~$0.14/$0.28
+per M - the value king) and MiniMax M3 (huge-repo, 1M-context questions).
+
+Addendum sources: [Unsloth Gemma 4](https://unsloth.ai/docs/models/gemma-4),
+[Gemma 4 benchmarks guide](https://aurigait.com/blog/gemma-4-features-benchmarks-guide/),
+[Gemma 4 26B/31B local benchmark](https://explore.n1n.ai/blog/benchmarking-google-gemma-4-26b-31b-locally-2026-04-06),
+[DeepSeek V4 launch analysis](https://artificialanalysis.ai/articles/deepseek-is-back-among-the-leading-open-weights-models-with-v4-pro-and-v4-flash),
+[MiniMax M3 announcement](https://www.minimax.io/blog/minimax-m3),
+[Kimi K2.6 self-hosting](https://unsloth.ai/docs/models/kimi-k2.6),
+[GLM-5.1 VRAM requirements](https://apxml.com/models/glm-51),
+[open coding models ranked](https://kilo.ai/open-source-models),
+[SWE-bench Pro cost ranking](https://www.morphllm.com/best-ai-model-for-coding).
