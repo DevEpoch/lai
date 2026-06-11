@@ -101,8 +101,10 @@ def cmd_vscode(args):
         else:
             die("extension is not compiled (editors/vscode/out missing) - "
                 "install Node.js and re-run, or use a packaged release")
-    dest = Path.home() / ".vscode" / "extensions" / \
-        "local-ai-env.local-ai-env-0.1.0"
+    pkg = load_json(src / "package.json", {})
+    ext_id = f"{pkg.get('publisher', 'local-ai-env')}." \
+             f"{pkg.get('name', 'local-ai-env')}-{pkg.get('version', '0.0.0')}"
+    dest = Path.home() / ".vscode" / "extensions" / ext_id
     if not confirm(f"install the VS Code extension to {dest}?"):
         return
     if dest.exists():
