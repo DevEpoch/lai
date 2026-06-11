@@ -78,7 +78,11 @@ class TestDashboardApi(unittest.TestCase):
         _, p = _req(self.port, "/api/ports")
         self.assertEqual(len(p["ports"]), 9)
         _, cc = _req(self.port, "/api/cloudcfg")
-        self.assertEqual(len(cc["providers"]), 3)
+        providers = cc["providers"]
+        self.assertGreaterEqual(len(providers), 3)
+        self.assertIn("aws", providers)
+        self.assertIn("azure", providers)
+        self.assertIn("gcp", providers)
 
     def test_downloads_and_projects(self):
         _, d = _req(self.port, "/api/downloads")
