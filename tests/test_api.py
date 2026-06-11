@@ -41,14 +41,17 @@ class TestDashboardApi(unittest.TestCase):
              "--port", str(cls.port)],
             stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
             cwd=str(ROOT))
-        for _ in range(40):
-            time.sleep(0.5)
+        deadline = time.monotonic() + 20.0
+        sleep_s = 0.05
+        while time.monotonic() < deadline:
+            time.sleep(sleep_s)
             try:
                 _req(cls.port, "/api/overview")
                 return
             except Exception:
                 if cls.proc.poll() is not None:
                     break
+            sleep_s = min(sleep_s * 2, 0.5)
         raise unittest.SkipTest("ui server failed to boot")
 
     @classmethod
@@ -103,6 +106,11 @@ class TestDashboardApi(unittest.TestCase):
         for path, payload, want in (
                 ("/api/nope", None, 404),
                 ("/api/logs?name=../../etc/passwd", None, 400),
+                ("/api/logs?name=..%2f..%2fetc%2fpasswd", None, 400),
+                ("/api/logs?name=..%252f..%252fetc%252fpasswd", None, 400),
+                ("/api/logs?name=..\\..\\windows\\win.ini", None, 400),
+                ("/api/logs?name=../../etc/passwd%00.log", None, 400),
+                ("/api/logs?name=..%E2%88%95..%E2%88%95etc%E2%88%95passwd", None, 400),
                 ("/api/set", {"role": "nope", "model": "x"}, 400),
                 ("/api/new", {"stack": "nope", "path": "X:/nope"}, 400),
                 ("/api/gate", {"path": str(ROOT / "nope")}, 400),
