@@ -4,6 +4,22 @@ All notable changes to lai. Format: [Keep a Changelog](https://keepachangelog.co
 Rule: every `VERSION` bump in `laicore/core.py` adds an entry here - `lai update`
 shows users exactly these entries when offering an update.
 
+## [0.13.0] - 2026-06-11
+
+### Changed
+- `lai go` no longer downloads models automatically. It sets up the
+  engine, wiring, and dashboard, then hands the model choice to YOU:
+  review/change the picks in the dashboard (or `lai set`) and start the
+  download yourself. Nothing heavy lands on disk without your say-so.
+
+### Added
+- Hugging Face token ask before downloads: `lai models` (terminal) and
+  the dashboard's Download button both offer to save a free HF token
+  when none is set - with a skip option. Tokens go to gitignored
+  `state/secrets.json` with owner-only permissions, never the repo.
+- `POST /api/hftoken` dashboard endpoint; `/api/downloads` now reports
+  `has_hftoken` so the UI knows whether to ask.
+
 ## [0.12.0] - 2026-06-11
 
 ### Added

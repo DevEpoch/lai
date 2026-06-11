@@ -99,6 +99,7 @@ class TestDashboardApi(unittest.TestCase):
         _, d = _req(self.port, "/api/downloads")
         self.assertIn("running", d)
         self.assertIn("items", d)
+        self.assertIn("has_hftoken", d)
         _, pj = _req(self.port, "/api/projects")
         self.assertIsInstance(pj["projects"], list)
 

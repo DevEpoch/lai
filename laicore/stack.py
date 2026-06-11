@@ -518,8 +518,18 @@ def cmd_models(args):
         os.environ.setdefault("HF_TOKEN", hf_tok)
         info("HF token applied (higher rate limits)")
     else:
-        info("tip: `lai hftoken` adds a free Hugging Face token -> faster, "
-             "rate-limit-free downloads (huggingface.co/settings/tokens)")
+        info("a free Hugging Face token avoids rate-limit slowdowns: "
+             "huggingface.co/settings/tokens -> 'Create new token' -> Read")
+        if sys.stdin.isatty():
+            tok = input("  paste a token to use one now "
+                        "(Enter to skip): ").strip()
+            if tok:
+                sec = load_json(SECRETS_PATH) or {}
+                sec["hf_token"] = tok
+                save_secrets(sec)
+                os.environ["HF_TOKEN"] = tok
+                ok("token saved (state/secrets.json - gitignored, "
+                   "never leaves this computer)")
     def _dir_gb(p):
         return sum(f.stat().st_size for f in Path(p).rglob("*")
                    if f.is_file()) / 2 ** 30 if Path(p).exists() else 0.0
@@ -1675,15 +1685,9 @@ def cmd_go(args):
     need_models = wanted_models(cat, choices)
     gb = sum(m["disk_gb"] for _, m in need_models)
     need_engine = not find_tool("llama-server", required=False)
-    todo = []
     if need_engine:
-        todo.append("the AI engine (about 1 GB)")
-    if need_models:
-        todo.append(f"the AI brains (about {gb:.0f} GB - this is the "
-                    "slow part, you can keep using the computer)")
-    if todo:
-        if not confirm("I need to download " + " and ".join(todo) +
-                       ". Everything is free. Start?"):
+        if not confirm("I need to download the AI engine (about 1 GB, "
+                       "free). Start?"):
             info("okay - run `lai go` whenever you're ready")
             return
     was = assume_yes()
@@ -1697,10 +1701,7 @@ def cmd_go(args):
         if need_engine:
             info("step 1: getting the AI engine...")
             cmd_engines(args)
-        if need_models:
-            info("step 2: downloading the AI brains (smallest first)...")
-            cmd_models(args)
-        info("step 3: wiring everything together...")
+        info("step 2: wiring everything together...")
         cmd_config(args)
         try:
             cmd_ide(args)
@@ -1711,7 +1712,7 @@ def cmd_go(args):
         except SystemExit:
             warn("extra tools skipped (Docker not ready) - everything "
                  "important still works")
-        info("step 4: starting your AI...")
+        info("step 3: starting your AI...")
         try:
             cmd_stop(args)
         except SystemExit:
@@ -1720,8 +1721,22 @@ def cmd_go(args):
     finally:
         set_assume_yes(was)
     print()
-    ok("ALL DONE! Your AI helper is running.")
-    print(f"""
+    if need_models:
+        ok("Setup done! One last step - YOU choose the AI brains.")
+        print(f"""
+  I picked good brains for this computer (~{gb:.0f} GB), but nothing
+  downloads until you say so:
+    1. Open  http://127.0.0.1:{P('ui')}  - your control room
+       (or double-click the 'Local AI Env' icon)
+    2. Check my picks - swap any model you like
+    3. Press '{chr(8675)} Start' under Downloads - when the bars
+       finish, the chat box comes alive
+  Prefer the terminal?  lai plan  (see picks)  ->  lai set  (change)
+                        ->  lai models  (download)
+""")
+    else:
+        ok("ALL DONE! Your AI helper is running.")
+        print(f"""
   Try these:
     1. Open  http://127.0.0.1:{P('ui')}  - your control room
        (or double-click the 'Local AI Env' icon)

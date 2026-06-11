@@ -124,7 +124,9 @@ def cmd_ui(args):
                 items.append({"id": mid, "expected_gb": m["disk_gb"],
                               "have_gb": round(dir_size_gb(MODELS / mid), 2),
                               "done": fin})
-        return {"running": download_running(), "items": items}
+        return {"running": download_running(), "items": items,
+                "has_hftoken": bool((load_json(SECRETS_PATH) or {})
+                                    .get("hf_token"))}
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, fmt, *a):  # silence per-request console spam
@@ -292,6 +294,15 @@ def cmd_ui(args):
                 elif u.path in ("/api/stop", "/api/restart"):
                     {"/api/stop": cmd_stop,
                      "/api/restart": cmd_restart}[u.path](ns)
+                    self._send({"ok": True})
+                elif u.path == "/api/hftoken":
+                    key = str(body.get("key") or "").strip()
+                    if not key:
+                        self._send({"error": "empty token"}, 400)
+                        return
+                    sec = load_json(SECRETS_PATH) or {}
+                    sec["hf_token"] = key
+                    save_secrets(sec)
                     self._send({"ok": True})
                 elif u.path == "/api/download":
                     if body.get("action") != "pause" \

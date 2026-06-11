@@ -27,6 +27,9 @@ const view = ref<ViewId>("home");
 const o = ref<Overview | null>(null);
 const services = ref<ServiceStatus[]>([]);
 const downloads = ref<DownloadItem[]>([]);
+const hasHfToken = ref(true); // assume present until /api/downloads says otherwise
+const hfAsk = ref(false);
+const hfKey = ref("");
 const ports = ref<PortRow[]>([]);
 const cloud = ref<CloudProvider[]>([]);
 const projects = ref<Project[]>([]);
@@ -64,12 +67,46 @@ async function refresh(): Promise<void> {
   try {
     o.value = await get<Overview>("/api/overview");
     services.value = await get<ServiceStatus[]>("/api/status");
-    downloads.value = (await get<{ items: DownloadItem[] }>("/api/downloads")).items;
+    const dl = await get<{ items: DownloadItem[]; has_hftoken?: boolean }>("/api/downloads");
+    downloads.value = dl.items;
+    hasHfToken.value = dl.has_hftoken !== false;
     if (view.value === "system") ports.value = (await get<{ ports: PortRow[] }>("/api/ports")).ports;
     if (view.value === "cloud") cloud.value = (await get<{ providers: CloudProvider[] }>("/api/cloudcfg")).providers;
     if (view.value === "projects" || view.value === "overview")
       projects.value = (await get<{ projects: Project[] }>("/api/projects")).projects;
   } catch { /* server briefly busy - next tick catches up */ }
+}
+
+function startDownload(): void {
+  void act("dl", () => post("/api/download", { action: "start" }), "download started");
+}
+
+function wantDownload(): void {
+  // first download without a HF token: offer to set one (free, faster)
+  if (!hasHfToken.value) { hfAsk.value = true; return; }
+  startDownload();
+}
+
+async function hfSaveAndStart(): Promise<void> {
+  const k = hfKey.value.trim();
+  hfAsk.value = false;
+  if (k) {
+    try {
+      await post("/api/hftoken", { key: k });
+      hasHfToken.value = true;
+      toast(t("hf.saved"));
+    } catch (e) {
+      toast((e as { error?: string }).error ?? "failed", true);
+      return;
+    }
+  }
+  hfKey.value = "";
+  startDownload();
+}
+
+function hfSkipAndStart(): void {
+  hfAsk.value = false;
+  startDownload();
 }
 
 async function loadCandidates(): Promise<void> {
@@ -339,8 +376,19 @@ onUnmounted(() => window.clearInterval(timer));
                 </tr>
               </tbody></table>
               <div class="row mt">
-                <button class="primary" :disabled="o?.running.download" @click="act('dl', () => post('/api/download', { action: 'start' }), 'download started')">{{ t("btn.dlstart") }}</button>
+                <button class="primary" :disabled="o?.running.download" @click="wantDownload">{{ t("btn.dlstart") }}</button>
                 <button :disabled="!o?.running.download" @click="act('dlp', () => post('/api/download', { action: 'pause' }), 'paused (resumable)')">{{ t("btn.dlpause") }}</button>
+              </div>
+              <div v-if="hfAsk" class="mt" style="border:1px solid var(--line);border-radius:8px;padding:12px">
+                <b>{{ t("hf.title") }}</b>
+                <div class="dim mt">{{ t("hf.body") }}</div>
+                <div class="row mt">
+                  <input v-model="hfKey" placeholder="hf_..." dir="ltr" style="flex:1" />
+                </div>
+                <div class="row mt">
+                  <button class="primary" @click="hfSaveAndStart">{{ t("hf.savestart") }}</button>
+                  <button @click="hfSkipAndStart">{{ t("hf.skipstart") }}</button>
+                </div>
               </div>
               <div class="dim mt">{{ t("dl.resume") }}</div>
             </div>
