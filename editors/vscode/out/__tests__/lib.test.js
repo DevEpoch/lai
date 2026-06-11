@@ -14,6 +14,27 @@ const join = (...p) => p.join("/");
         (0, vitest_1.expect)((0, lib_1.findLaiHome)([undefined, "a"], fsx, join)).toBeNull();
     });
 });
+(0, vitest_1.describe)("pickRole", () => {
+    (0, vitest_1.it)("routes coding verbs to coder", () => {
+        (0, vitest_1.expect)((0, lib_1.pickRole)("fix this bug in my parser")).toBe("coder");
+        (0, vitest_1.expect)((0, lib_1.pickRole)("write a regex for emails")).toBe("coder");
+    });
+    (0, vitest_1.it)("routes reasoning and translation to thinker", () => {
+        (0, vitest_1.expect)((0, lib_1.pickRole)("explain why this design is better")).toBe("thinker");
+        (0, vitest_1.expect)((0, lib_1.pickRole)("translate this paragraph to French")).toBe("thinker");
+    });
+    (0, vitest_1.it)("routes Persian/Arabic reasoning words to thinker", () => {
+        (0, vitest_1.expect)((0, lib_1.pickRole)("این متن را ترجمه کن")).toBe("thinker");
+        (0, vitest_1.expect)((0, lib_1.pickRole)("اشرح هذا الكود")).toBe("thinker");
+    });
+    (0, vitest_1.it)("coding verbs win over reasoning verbs; code blocks mean coder", () => {
+        (0, vitest_1.expect)((0, lib_1.pickRole)("explain and fix this error")).toBe("coder");
+        (0, vitest_1.expect)((0, lib_1.pickRole)("what does this do?\n```js\nx()\n```")).toBe("coder");
+    });
+    (0, vitest_1.it)("defaults to coder", () => {
+        (0, vitest_1.expect)((0, lib_1.pickRole)("hello")).toBe("coder");
+    });
+});
 (0, vitest_1.describe)("portFromStateJson", () => {
     (0, vitest_1.it)("reads a configured port", () => {
         (0, vitest_1.expect)((0, lib_1.portFromStateJson)('{"ui": 9001}', "ui", 8090)).toBe(9001);

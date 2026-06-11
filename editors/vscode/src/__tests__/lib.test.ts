@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { apiKeyFromSecrets, findLaiHome, lastCodeBlock, portFromStateJson,
-         sseToken } from "../lib";
+import { apiKeyFromSecrets, findLaiHome, lastCodeBlock, pickRole,
+         portFromStateJson, sseToken } from "../lib";
 
 const join = (...p: string[]) => p.join("/");
 
@@ -13,6 +13,28 @@ describe("findLaiHome", () => {
   it("skips undefined candidates and returns null when none match", () => {
     const fsx = { exists: () => false, read: () => "" };
     expect(findLaiHome([undefined, "a"], fsx, join)).toBeNull();
+  });
+});
+
+describe("pickRole", () => {
+  it("routes coding verbs to coder", () => {
+    expect(pickRole("fix this bug in my parser")).toBe("coder");
+    expect(pickRole("write a regex for emails")).toBe("coder");
+  });
+  it("routes reasoning and translation to thinker", () => {
+    expect(pickRole("explain why this design is better")).toBe("thinker");
+    expect(pickRole("translate this paragraph to French")).toBe("thinker");
+  });
+  it("routes Persian/Arabic reasoning words to thinker", () => {
+    expect(pickRole("این متن را ترجمه کن")).toBe("thinker");
+    expect(pickRole("اشرح هذا الكود")).toBe("thinker");
+  });
+  it("coding verbs win over reasoning verbs; code blocks mean coder", () => {
+    expect(pickRole("explain and fix this error")).toBe("coder");
+    expect(pickRole("what does this do?\n```js\nx()\n```")).toBe("coder");
+  });
+  it("defaults to coder", () => {
+    expect(pickRole("hello")).toBe("coder");
   });
 });
 
