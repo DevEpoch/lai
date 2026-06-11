@@ -105,7 +105,10 @@ class TestDashboardApi(unittest.TestCase):
                 ("/api/logs?name=../../etc/passwd", None, 400),
                 ("/api/set", {"role": "nope", "model": "x"}, 400),
                 ("/api/new", {"stack": "nope", "path": "X:/nope"}, 400),
-                ("/api/gate", {"path": str(ROOT / "nope")}, 400)):
+                ("/api/gate", {"path": str(ROOT / "nope")}, 400),
+                # filesystem root: blocked by the workspace barrier (or,
+                # if a registered project allows the drive, by the gate)
+                ("/api/gate", {"path": "/"}, 400)):
             with self.assertRaises(urllib.error.HTTPError) as cm:
                 _req(self.port, path, payload)
             self.assertEqual(cm.exception.code, want, path)

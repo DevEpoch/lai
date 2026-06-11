@@ -6,6 +6,32 @@ from .work import *  # noqa: F401,F403
 from .projects import *  # noqa: F401,F403
 from .stack import _kill, _port_status  # noqa: F401  (underscores: not star-exported)
 
+def _web_roots():
+    """Directories the dashboard API may touch. The CLI is unrestricted
+    (you typed the path yourself); the web API is confined to your home
+    folder, known projects, and any extras listed under workspace_roots
+    in state/settings.json."""
+    roots = [str(Path.home())]
+    roots += [str(r) for r in
+              (load_json(STATE / "settings.json") or {})
+              .get("workspace_roots", [])]
+    for p in projects_registry():
+        roots.append(str(Path(str(p.get("path", ""))).parent))
+    return roots
+
+def _web_path(s):
+    """Normalize a request-supplied path and require it under an allowed
+    root (realpath + startswith - the canonical path-injection barrier)."""
+    rp = os.path.realpath(str(s or ""))
+    for root in _web_roots():
+        rr = os.path.realpath(root)
+        if rp == rr or rp.startswith(rr + os.sep):
+            return rp
+    raise ValueError(
+        "that folder is outside your home/workspace, so the dashboard "
+        "won't touch it - run the command from the CLI instead, or add "
+        "the folder to workspace_roots in state/settings.json")
+
 def cmd_ui(args):
     import http.server
     import webbrowser
@@ -112,15 +138,16 @@ def cmd_ui(args):
                     self._send(ui_file.read_bytes(),
                                ctype="text/html; charset=utf-8")
                 elif u.path.startswith("/assets/"):
-                    f = (dist / u.path.lstrip("/")).resolve()
-                    if dist.exists() and str(f).startswith(str(dist)) \
-                            and f.is_file():
+                    base = os.path.realpath(str(dist))
+                    f = os.path.realpath(
+                        str(dist / u.path.lstrip("/")))
+                    if f.startswith(base + os.sep) and os.path.isfile(f):
                         ctypes_map = {".js": "application/javascript",
                                       ".css": "text/css",
                                       ".svg": "image/svg+xml",
                                       ".woff2": "font/woff2"}
-                        self._send(f.read_bytes(),
-                                   ctype=ctypes_map.get(f.suffix,
+                        self._send(Path(f).read_bytes(),
+                                   ctype=ctypes_map.get(Path(f).suffix,
                                                         "application/octet-stream"))
                     else:
                         self._send({"error": "not found"}, 404)
@@ -170,10 +197,14 @@ def cmd_ui(args):
                     if not re.fullmatch(r"[\w.-]+", name or ""):
                         self._send({"error": "bad name"}, 400)
                         return
-                    f = LOGS / f"{name}.log"
-                    lines = f.read_text(encoding="utf-8",
-                                        errors="replace").splitlines()[-80:] \
-                        if f.exists() else []
+                    base = os.path.realpath(str(LOGS))
+                    f = os.path.realpath(str(LOGS / f"{name}.log"))
+                    if not f.startswith(base + os.sep):
+                        self._send({"error": "bad name"}, 400)
+                        return
+                    lines = Path(f).read_text(encoding="utf-8",
+                                              errors="replace") \
+                        .splitlines()[-80:] if os.path.exists(f) else []
                     self._send({"text": "\n".join(lines)})
                 else:
                     self._send({"error": "not found"}, 404)
@@ -286,7 +317,7 @@ def cmd_ui(args):
                     cat = load_catalog()
                     try:
                         out = new_project(cat, body.get("stack"),
-                                          body.get("path"),
+                                          _web_path(body.get("path")),
                                           devcontainer=body.get(
                                               "devcontainer", False))
                         self._send({"ok": True, "path": str(out)})
@@ -296,7 +327,7 @@ def cmd_ui(args):
                     cat = load_catalog()
                     try:
                         results, proj = gate_project(
-                            cat, body.get("path"),
+                            cat, _web_path(body.get("path")),
                             fix=body.get("fix", False))
                         if body.get("fix"):
                             cmd_config(ns)
@@ -353,7 +384,7 @@ def cmd_ui(args):
                 elif u.path == "/api/skill":
                     try:
                         actions = install_skill(body.get("name"),
-                                                body.get("path"),
+                                                _web_path(body.get("path")),
                                                 force=body.get("force",
                                                                False))
                         self._send({"ok": True, "actions": actions})
