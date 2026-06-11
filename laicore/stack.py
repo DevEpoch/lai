@@ -1523,3 +1523,78 @@ def cmd_ports(args):
         except SystemExit:
             pass
         info("then: lai restart | lai docker | lai ide (to rewire Continue)")
+
+
+def cmd_go(args):
+    """The one-word beginner path: set everything up with one question."""
+    print()
+    print(c("1", "  Hi! I'm lai. I'll set up your very own AI helper - it"))
+    print(c("1", "  lives on THIS computer, it's free, and nothing you type"))
+    print(c("1", "  ever leaves your machine."))
+    print()
+    cat = load_catalog()
+    choices = load_json(CHOICES_PATH)
+    if not choices:
+        hw = detect_hw(interactive=False)
+        tier = match_tier(cat, hw)
+        if not tier:
+            die("this computer is below the minimum (see docs/06)")
+        choices = build_choices(cat, tier, hw)
+        apply_usecase(cat, choices, "general")
+        save_text(CHOICES_PATH, json.dumps(choices, indent=2))
+    need_models = wanted_models(cat, choices)
+    gb = sum(m["disk_gb"] for _, m in need_models)
+    need_engine = not find_tool("llama-server", required=False)
+    todo = []
+    if need_engine:
+        todo.append("the AI engine (about 1 GB)")
+    if need_models:
+        todo.append(f"the AI brains (about {gb:.0f} GB - this is the "
+                    "slow part, you can keep using the computer)")
+    if todo:
+        if not confirm("I need to download " + " and ".join(todo) +
+                       ". Everything is free. Start?"):
+            info("okay - run `lai go` whenever you're ready")
+            return
+    was = assume_yes()
+    set_assume_yes(True)  # the user just gave the one approval that matters
+    try:
+        try:
+            cmd_ports(argparse.Namespace(action="check", fix=True, name=None,
+                                         value=None, yes=True))
+        except SystemExit:
+            pass
+        if need_engine:
+            info("step 1: getting the AI engine...")
+            cmd_engines(args)
+        if need_models:
+            info("step 2: downloading the AI brains (smallest first)...")
+            cmd_models(args)
+        info("step 3: wiring everything together...")
+        cmd_config(args)
+        try:
+            cmd_ide(args)
+        except SystemExit:
+            pass
+        try:
+            cmd_docker(args)
+        except SystemExit:
+            warn("extra tools skipped (Docker not ready) - everything "
+                 "important still works")
+        info("step 4: starting your AI...")
+        try:
+            cmd_stop(args)
+        except SystemExit:
+            pass
+        cmd_start(args)
+    finally:
+        set_assume_yes(was)
+    print()
+    ok("ALL DONE! Your AI helper is running.")
+    print(f"""
+  Try these:
+    1. Open  http://127.0.0.1:{P('ui')}  - your control room
+       (or double-click the 'Local AI Env' icon)
+    2. Type in the chat box: "write a snake game in Python"
+    3. In a terminal:  lai chat
+""")

@@ -21,6 +21,7 @@ default 8080) serving models named `coder`, `thinker`, `vision`.
   machine-oriented reference - every command, file contract, HTTP API,
   concepts, and tutorial-ready workflows
 - [README](README.md): human overview and quick start
+- [Easy start](docs/easy-start.md): zero-knowledge 3-step guide (install, lai go, chat)
 - [Architecture & data flow](docs/01-architecture.md): design rules, winners
 - [Model stack & memory budgets](docs/02-models.md): per-tier model choices,
   swap-cost policy

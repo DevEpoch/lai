@@ -17,6 +17,8 @@ Edit it anytime, then `lai plan` to re-evaluate.
 Usage:  python lai.py <command> [--yes]   (or the lai.ps1 / lai.sh wrappers)
 
 Commands:
+  go         EASIEST START: sets everything up with one question,
+             then opens your AI - made for absolute beginners
   check      report hardware, dependencies, and install state
   plan       detect hardware, match a catalog tier, review/edit the choices
   choices    show current choices and the alternatives that fit this machine
@@ -117,7 +119,7 @@ def main():
         "gate": cmd_gate, "skill": cmd_skill, "git": cmd_git,
         "connect": cmd_connect, "share": cmd_share, "tune": cmd_tune,
         "docs": cmd_docs, "chat": cmd_chat, "shortcut": cmd_shortcut,
-        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports,
+        "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go,
         "vscode": cmd_vscode,
     }
     for name in commands:

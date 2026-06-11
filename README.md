@@ -43,6 +43,18 @@ Architecture, trade-offs, and data flow: [docs/01-architecture.md](docs/01-archi
 The companion extension installs without any build tools - copy the folder into
 `~/.vscode/extensions/` (see its [README](editors/vscode/README.md)).
 
+## New here? Three steps
+
+```text
+1. install   (one line - see below)
+2. lai go    (one friendly question, then it does everything)
+3. double-click "Local AI Env" and start chatting
+```
+
+Full hand-holding version: [docs/easy-start.md](docs/easy-start.md). The
+dashboard opens on a simple Home screen - status light, progress, and a chat
+box; all the pro controls live in the other tabs.
+
 ## Quick start
 
 One-line install (or just clone and run):
@@ -215,6 +227,7 @@ tools/ models/ logs/ run/ benchmarks/   runtime artifacts                  (giti
 9. [Team server, auto-tuning, docs RAG, updates](docs/09-team-tune-docsrag.md)
 10. [Cloud fallback - optional, explicit, minimal](docs/10-cloud-fallback.md)
 11. [LLM reference - complete machine-oriented surface](docs/llm-reference.md)
+12. [Easy start - for absolute beginners](docs/easy-start.md)
 
 ## For LLMs and AI agents
 

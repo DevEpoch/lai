@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
 import {
-  Choices, CloudProvider, DownloadItem, GateRow, Overview, PortRow,
+  CloudProvider, DownloadItem, GateRow, Overview, PortRow,
   Project, ServiceStatus, get, post,
 } from "./api";
 
-type ViewId = "overview" | "plan" | "projects" | "cloud" | "system" | "logs";
+type ViewId = "home" | "overview" | "plan" | "projects" | "cloud" | "system" | "logs";
 const NAV: { id: ViewId; ico: string; label: string }[] = [
+  { id: "home", ico: "⌂", label: "Home" },
   { id: "overview", ico: "◉", label: "Overview" },
   { id: "plan", ico: "▦", label: "Models & Plan" },
   { id: "projects", ico: "❖", label: "Projects" },
@@ -16,7 +17,7 @@ const NAV: { id: ViewId; ico: string; label: string }[] = [
 ];
 
 const ICON = "/icon.svg"; // served by lai at runtime - not a bundled asset
-const view = ref<ViewId>("overview");
+const view = ref<ViewId>("home");
 const o = ref<Overview | null>(null);
 const services = ref<ServiceStatus[]>([]);
 const downloads = ref<DownloadItem[]>([]);
@@ -72,7 +73,7 @@ async function loadCandidates(): Promise<void> {
 const hw = computed(() => o.value?.choices?.hardware);
 const hwLine = computed(() => {
   const ch = o.value?.choices;
-  if (!ch || !hw.value) return "no plan yet — pick a use case in Models & Plan";
+  if (!ch || !hw.value) return "no plan yet — use Home or Models & Plan";
   return `${ch.tier} · ${hw.value.gpus.map(g => g.name).join(", ") || "no GPU"} · ` +
     `${hw.value.vram_gb} GB VRAM · ${hw.value.ram_gb} GB RAM · ${ch.engine}` +
     (o.value?.remote ? ` · ⇄ ${o.value.remote.host}:${o.value.remote.port}` : "");
@@ -127,6 +128,48 @@ async function loadLog(): Promise<void> {
 
 const useModel = reactive<Record<string, string>>({});
 
+// ---- Home (simple mode) ----
+interface ChatMsg { role: "user" | "assistant"; content: string }
+const chatMsgs = ref<ChatMsg[]>([]);
+const chatInput = ref("");
+const chatBusy = ref(false);
+const swapUp = computed(() => services.value.some(s => s.name.startsWith("llama-swap") && s.up));
+const allModelsDone = computed(() => downloads.value.length > 0 && downloads.value.every(d => d.done));
+const homeState = computed<"setup" | "downloading" | "starting" | "ready">(() => {
+  if (!o.value?.choices || (!downloads.value.length && !o.value.running.setup)) return "setup";
+  if (o.value.running.download || o.value.running.setup || !allModelsDone.value) return "downloading";
+  return swapUp.value ? "ready" : "starting";
+});
+const homePct = computed(() => dlTotal.value ? Math.min(99, Math.round(dlHave.value / dlTotal.value * 100)) : 0);
+const HOME_TEXT: Record<string, { big: string; small: string }> = {
+  setup: { big: "Let's set up your AI!", small: "One click. Everything is free and stays on this computer." },
+  downloading: { big: "Getting your AI ready…", small: "Downloading the AI brains. You can keep using the computer." },
+  starting: { big: "Almost there!", small: "Your AI is installed — press Start to wake it up." },
+  ready: { big: "Your AI is ready! 🎉", small: "Ask it anything below — it runs 100% on this computer." },
+};
+
+async function easySetup(): Promise<void> {
+  await act("easy", () => post("/api/easy"), "Setting everything up — watch the progress here!");
+}
+
+async function sendChat(): Promise<void> {
+  const text = chatInput.value.trim();
+  if (!text || chatBusy.value) return;
+  chatMsgs.value.push({ role: "user", content: text });
+  chatInput.value = "";
+  chatBusy.value = true;
+  try {
+    const r = await post<{ reply: string }>("/api/chat", {
+      messages: chatMsgs.value.map(m => ({ role: m.role, content: m.content })).slice(-12),
+    });
+    chatMsgs.value.push({ role: "assistant", content: r.reply });
+  } catch (e) {
+    toast((e as { error?: string }).error ?? "chat failed", true);
+  } finally {
+    chatBusy.value = false;
+  }
+}
+
 onMounted(async () => {
   await refresh();
   await loadCandidates();
@@ -163,8 +206,64 @@ onUnmounted(() => window.clearInterval(timer));
       <div class="content" style="position:relative">
         <Transition name="view" mode="out-in">
 
+          <!-- ============ HOME (simple mode) ============ -->
+          <div v-if="view === 'home'" key="home" class="grid">
+            <div class="card wide hero">
+              <div class="hero-light" :class="homeState"></div>
+              <div>
+                <div class="hero-big">{{ HOME_TEXT[homeState].big }}</div>
+                <div class="dim">{{ HOME_TEXT[homeState].small }}</div>
+              </div>
+              <div style="flex:1"></div>
+              <button v-if="homeState === 'setup'" class="primary hero-btn" :disabled="busy.easy"
+                      @click="easySetup()">Set up my AI</button>
+              <button v-else-if="homeState === 'starting'" class="primary hero-btn" :disabled="busy.start"
+                      @click="act('start', () => post('/api/start'), 'Starting…')">Start my AI</button>
+            </div>
+
+            <div v-if="homeState === 'downloading'" class="card wide">
+              <h3>Progress · {{ homePct }}%</h3>
+              <div class="bar big"><i :style="{ width: homePct + '%' }"></i></div>
+              <div class="dim mt">{{ dlHave.toFixed(1) }} of {{ dlTotal.toFixed(1) }} GB —
+                small helpers arrive first, the big brain comes last. Safe to close and continue later.</div>
+            </div>
+
+            <div class="card wide">
+              <h3>Talk to your AI</h3>
+              <div class="chatbox" v-if="chatMsgs.length">
+                <div v-for="(m, i) in chatMsgs" :key="i" class="msg" :class="m.role">
+                  <pre>{{ m.content }}</pre>
+                </div>
+                <div v-if="chatBusy" class="msg assistant dim">thinking…</div>
+              </div>
+              <div class="row mt">
+                <input v-model="chatInput" :disabled="homeState !== 'ready'" style="flex:1"
+                       :placeholder="homeState === 'ready' ? 'try: write a snake game in Python' : 'your AI will be ready to chat soon…'"
+                       @keydown.enter="sendChat()" />
+                <button class="primary" :disabled="homeState !== 'ready' || chatBusy" @click="sendChat()">Send</button>
+              </div>
+              <div class="dim mt">First answer takes a minute (the AI wakes up). For the full chat app with
+                history and files, open <a :href="svcUrl('open-webui :3001') ?? 'http://localhost:3001'" target="_blank">Open WebUI ↗</a></div>
+            </div>
+
+            <div class="card">
+              <h3>What can I do?</h3>
+              <div class="dim">
+                · Ask for code, stories, homework help — anything<br />
+                · In a terminal: <span class="mono">lai chat</span><br />
+                · Make a real app: Projects tab → Create<br />
+                · Grown-up controls: the other tabs on the left
+              </div>
+            </div>
+            <div class="card">
+              <h3>Is it private?</h3>
+              <div class="dim">Yes. The AI runs on this computer. No account, no cost,
+                no internet needed after setup, and nothing you type is sent anywhere.</div>
+            </div>
+          </div>
+
           <!-- ============ OVERVIEW ============ -->
-          <div v-if="view === 'overview'" key="overview" class="grid">
+          <div v-else-if="view === 'overview'" key="overview" class="grid">
             <div class="card">
               <h3>Services</h3>
               <table><tbody>
@@ -285,7 +384,7 @@ lai info            # one-screen status</pre>
                       {{ p.last_gate.fail ? p.last_gate.fail + " fail" : "gate ok" }}{{ p.last_gate.warn ? " · " + p.last_gate.warn + " warn" : "" }}
                     </span>
                   </td>
-                  <td style="text-align:right" class="row" >
+                  <td style="text-align:right" class="row">
                     <button @click="gate(p.path, false)">Gate</button>
                     <button @click="gate(p.path, true)">Fix</button>
                     <select :id="'sk-' + p.name" style="max-width:130px">

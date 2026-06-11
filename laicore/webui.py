@@ -62,7 +62,8 @@ def cmd_ui(args):
                        for k, v in list_skills().items()},
             "versions": load_json(VERSIONS_PATH, {}),
             "running": {"download": job_running("download"),
-                        "bench": job_running("bench")},
+                        "bench": job_running("bench"),
+                        "setup": job_running("setup")},
             "last_quality": last_q,
             "logs": sorted(f.name[:-4] for f in LOGS.glob("*.log")),
         }
@@ -249,6 +250,25 @@ def cmd_ui(args):
                                     "stack": proj.get("stack")})
                     except ValueError as e:
                         self._send({"error": str(e)}, 400)
+                elif u.path == "/api/easy":
+                    started = start_job("setup", ["go", "--yes"],
+                                        "setup-ui.log")
+                    self._send({"ok": started})
+                elif u.path == "/api/chat":
+                    try:
+                        r = http_json(
+                            f"{endpoint_base()}/v1/chat/completions",
+                            {"model": body.get("model", "coder"),
+                             "messages": body.get("messages", []),
+                             "max_tokens": 2048, "temperature": 0.4},
+                            timeout=900, headers=auth_headers())
+                        self._send({"reply": r["choices"][0]["message"]
+                                    .get("content", "")})
+                    except Exception:
+                        self._send({"error": "Your AI is not ready yet - "
+                                    "it may still be downloading or "
+                                    "starting. Check the Home screen "
+                                    "progress."}, 503)
                 elif u.path == "/api/skill":
                     try:
                         actions = install_skill(body.get("name"),
