@@ -124,3 +124,18 @@ Addendum sources: [Unsloth Gemma 4](https://unsloth.ai/docs/models/gemma-4),
 [GLM-5.1 VRAM requirements](https://apxml.com/models/glm-51),
 [open coding models ranked](https://kilo.ai/open-source-models),
 [SWE-bench Pro cost ranking](https://www.morphllm.com/best-ai-model-for-coding).
+
+## Research addendum 2 (2026-06-11): long-context and tiny-CPU niches
+
+- **kimi-linear-48b-a3b** added: Moonshot's linear-attention hybrid (48B
+  total / 3B active) cuts the KV cache ~75% and decodes ~6x faster at 1M
+  context, leading RULER/RepoQA - the first real "huge repo in one prompt"
+  model that fits prosumer hardware (hybrid on 24 GB GPU + 36 GB RAM).
+  Sources: [model card](https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct),
+  [paper](https://arxiv.org/pdf/2510.26692),
+  [RTX-3060 local benchmark](https://www.tyolab.com/blog/2026/05/11-64gb-ram-12gb-vram-the-honest-local-llm-benchmark/).
+- **lfm2.5-1.2b** added and made the cpu-min default coder: ~46 tok/s at a
+  full 32K context on plain CPUs ([Liquid AI card](https://huggingface.co/LiquidAI/LFM2.5-1.2B-Thinking)) -
+  the no-GPU floor stops being demo-grade.
+- Skills grew to 12 (performance, a11y, refactor join); stacks to 21
+  (astro-site, expo-app) - both generators verified non-interactive.

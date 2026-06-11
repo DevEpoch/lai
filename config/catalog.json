@@ -1,5 +1,5 @@
 {
-  "catalog_version": "2026.06.11b",
+  "catalog_version": "2026.06.11c",
   "_comment": [
     "THE HARDWARE -> RECOMMENDATION TABLE. Edit this file freely, then run `lai plan`",
     "to re-evaluate (and `lai models && lai config && lai restart` to apply).",
@@ -115,6 +115,29 @@
       "hybrid_ram_gb": 192,
       "verify": true,
       "why": "frontier-class open coding (~80 SWE-bench Verified) for multi-GPU rigs (2x 96 GB class); GGUF quants not published yet - `lai refresh` will spot them when they land"
+    },
+    "kimi-linear-48b-a3b": {
+      "name": "Kimi-Linear-48B-A3B (Moonshot)",
+      "repo": "bartowski/moonshotai_Kimi-Linear-48B-A3B-Instruct-GGUF",
+      "include": ["*Q4_K_M*"],
+      "disk_gb": 27.5,
+      "moe": true,
+      "roles": ["coder", "thinker"],
+      "fits_vram_gb": 30,
+      "hybrid_ram_gb": 36,
+      "cpu_ok": true,
+      "why": "the LONG-CONTEXT champion: linear-attention hybrid with 75% smaller KV cache and ~6x decode speed at 1M ctx, leads RULER/RepoQA; 3B-active MoE = same hybrid economics. Pick it for huge-repo reasoning on 24 GB GPUs (hybrid, 36+ GB RAM) or 32 GB+ VRAM"
+    },
+    "lfm2.5-1.2b": {
+      "name": "LFM2.5-1.2B (Liquid AI)",
+      "repo": "unsloth/LFM2.5-1.2B-Instruct-GGUF",
+      "include": ["*Q8_0*", "*q8_0*", "*Q4_K_M*"],
+      "disk_gb": 0.9,
+      "moe": false,
+      "roles": ["coder"],
+      "fits_vram_gb": 1.5,
+      "cpu_ok": true,
+      "why": "the strongest tiny model for weak machines: ~46 tok/s at full 32K context ON CPU - upgrades the cpu-min tier from demo-grade to genuinely usable"
     },
     "qwen3-coder-next": {
       "name": "Qwen3-Coder-Next (80B-A3B class)",
@@ -534,6 +557,30 @@
       "required_roles": ["coder", "vision", "embeddings"],
       "min_ctx": 16384
     },
+    "astro-site": {
+      "label": "Content website (Astro - blogs, docs, marketing)",
+      "usecase": "web",
+      "toolchains": [{"bin": "npm", "hint": "install Node.js: winget install OpenJS.NodeJS.LTS | brew install node"}],
+      "init_cmds": [["npm", "create", "astro@latest", ".", "--", "--template", "minimal", "--install", "--no-git", "--yes"]],
+      "files": {},
+      "agents": {"build": "npm run build", "test": "-", "lint": "npx astro check", "run": "npm run dev"},
+      "extensions": ["astro-build.astro-vscode"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
+    "expo-app": {
+      "label": "Mobile app (Expo / React Native + TypeScript)",
+      "usecase": "mobile",
+      "toolchains": [{"bin": "npx", "hint": "install Node.js: winget install OpenJS.NodeJS.LTS | brew install node"}],
+      "init_cmds": [["npx", "--yes", "create-expo-app@latest", ".", "--template", "blank-typescript", "--no-install"], ["npm", "install"]],
+      "files": {},
+      "agents": {"build": "npx expo export", "test": "npm test", "lint": "npx expo lint", "run": "npx expo start"},
+      "extensions": ["expo.vscode-expo-tools", "dbaeumer.vscode-eslint"],
+      "gitignore": [],
+      "required_roles": ["coder", "vision", "thinker", "autocomplete", "embeddings"],
+      "min_ctx": 16384
+    },
     "python-ml": {
       "label": "Python data science / ML project",
       "usecase": "data-ml",
@@ -629,7 +676,7 @@
         "embeddings":   {"model": "qwen3-embedding-0.6b", "mode": "gpu"}
       },
       "targets": {"pp": 1500, "tg": 90},
-      "notes": ["with 64+ GB system RAM, qwen3-coder-next runs hybrid at ~15-25 tok/s - near-frontier quality", "gemma-4-26b-a4b fits fully resident here too - the best generalist alternative; compare with lai bench --quality"]
+      "notes": ["with 64+ GB system RAM, qwen3-coder-next runs hybrid at ~15-25 tok/s - near-frontier quality", "gemma-4-26b-a4b fits fully resident here too - the best generalist alternative; compare with lai bench --quality", "huge-repo work: kimi-linear-48b-a3b (hybrid, 36+ GB RAM) leads long-context benchmarks with a 75% smaller KV cache"]
     },
     {
       "id": "gpu-16gb", "label": "NVIDIA/AMD GPU, 14-20 GB VRAM",
@@ -726,7 +773,7 @@
       "id": "cpu-min", "label": "No usable GPU, under 12 GB RAM",
       "platform": ["windows", "linux"], "vendor": ["none"], "min_ram_gb": 0,
       "defaults": {
-        "coder":        {"model": "qwen2.5-coder-1.5b", "mode": "cpu", "ctx": 4096},
+        "coder":        {"model": "lfm2.5-1.2b", "mode": "cpu", "ctx": 8192},
         "thinker":      {"model": null},
         "vision":       {"model": null},
         "autocomplete": {"model": null},
