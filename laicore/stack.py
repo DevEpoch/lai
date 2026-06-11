@@ -1659,6 +1659,28 @@ def cmd_refresh(args):
     except Exception:
         pass
 
+    # 1b. is lai itself behind? (policy auto -> apply right here)
+    if (ROOT / ".git").exists() and shutil.which("git"):
+        subprocess.run(["git", "-C", str(ROOT), "fetch", "--quiet"],
+                       capture_output=True)
+        behind = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-list", "--count",
+             "HEAD..@{upstream}"], capture_output=True,
+            text=True).stdout.strip()
+        if behind.isdigit() and int(behind) > 0:
+            if update_policy() == "auto":
+                r = subprocess.run(["git", "-C", str(ROOT), "pull",
+                                    "--ff-only"], capture_output=True,
+                                   text=True)
+                findings.append(
+                    f"lai auto-updated ({behind} commit(s)) - see CHANGELOG"
+                    if r.returncode == 0 else
+                    "lai update available but auto-pull failed - run "
+                    "`lai update`")
+            else:
+                findings.append(f"lai update available ({behind} "
+                                "commit(s)) - run `lai update`")
+
     # 2. do all current repos still resolve?
     broken = []
     for mid, m in cat["models"].items():
@@ -1792,3 +1814,114 @@ def _refresh_schedule(mode):
             return
     ok(f"refresh scheduled ({mode}) - you will get an OS notification "
        "whenever new models or catalog updates appear")
+
+
+def update_policy():
+    return (load_json(STATE / "settings.json") or {}).get("update_policy",
+                                                          "ask")
+
+
+def _changelog_delta(since_version):
+    """Entries from CHANGELOG.md newer than the given version."""
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8",
+                                             errors="replace") \
+        if (ROOT / "CHANGELOG.md").exists() else ""
+    out, take = [], False
+    for line in text.splitlines():
+        m = re.match(r"## \[([0-9][\w.\-]*)\]", line)
+        if m:
+            take = m.group(1) > since_version
+        if take:
+            out.append(line)
+    return "\n".join(out).strip()
+
+
+def cmd_update(args):
+    """Self-update via git: only changed files move - no update server."""
+    if getattr(args, "policy", None):
+        s = load_json(STATE / "settings.json") or {}
+        s["update_policy"] = args.policy
+        save_text(STATE / "settings.json", json.dumps(s, indent=2))
+        ok(f"update policy: {args.policy} "
+           "(auto = applied silently, also by scheduled refresh; "
+           "ask = confirm first; never = manual `lai update` only)")
+        return
+    if not (ROOT / ".git").exists() or not shutil.which("git"):
+        die("this install is not a git clone - update by re-running the "
+            "installer (it preserves your state/ and models/)")
+    subprocess.run(["git", "-C", str(ROOT), "fetch", "--tags", "--quiet"],
+                   capture_output=True)
+    if getattr(args, "list_versions", False):
+        tags = subprocess.run(["git", "-C", str(ROOT), "tag", "--sort",
+                               "-creatordate"], capture_output=True,
+                              text=True).stdout.split()
+        cur = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags",
+                              "--always"], capture_output=True,
+                             text=True).stdout.strip()
+        info(f"current: {cur} (lai {VERSION})")
+        for t in tags[:15] or ["(no tags published yet)"]:
+            print(f"  {t}")
+        info("switch: lai update --to <tag>   |   back to newest: "
+             "lai update --to main")
+        return
+    if getattr(args, "to", None):
+        dirty = subprocess.run(["git", "-C", str(ROOT), "status",
+                                "--porcelain"], capture_output=True,
+                               text=True).stdout.strip()
+        if dirty:
+            die("local changes present - commit or stash them before "
+                "switching versions")
+        target = args.to
+        r = subprocess.run(["git", "-C", str(ROOT), "checkout", target],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            die(f"cannot switch to '{target}': {r.stderr.strip()}")
+        if target in ("main", "master"):
+            subprocess.run(["git", "-C", str(ROOT), "pull", "--ff-only"],
+                           capture_output=True)
+        ok(f"now on {target} - restart the stack: lai restart")
+        return
+
+    behind = subprocess.run(
+        ["git", "-C", str(ROOT), "rev-list", "--count",
+         "HEAD..@{upstream}"], capture_output=True, text=True).stdout.strip()
+    if not behind.isdigit() or int(behind) == 0:
+        ok(f"lai {VERSION} is up to date")
+        return
+    files = subprocess.run(
+        ["git", "-C", str(ROOT), "diff", "--name-only",
+         "HEAD..@{upstream}"], capture_output=True, text=True
+    ).stdout.split()
+    sections = {}
+    for f in files:
+        sections.setdefault(f.split("/")[0], 0)
+        sections[f.split("/")[0]] += 1
+    info(f"update available: {behind} commit(s), {len(files)} file(s) - "
+         + ", ".join(f"{k} ({v})" for k, v in sorted(sections.items())))
+    delta = _changelog_delta(VERSION)
+    if delta:
+        print(c("90", "\n" + delta + "\n"))
+    if getattr(args, "check", False):
+        info("apply with: lai update")
+        return
+    pol = update_policy()
+    if pol == "never":
+        info("update policy is 'never' - apply manually with "
+             "`lai update --policy ask` first, or review the diff yourself")
+        return
+    if pol == "ask" and not confirm("apply this update now? (only the "
+                                    "changed files move; your state/, "
+                                    "models/, and projects are untouched)"):
+        return
+    r = subprocess.run(["git", "-C", str(ROOT), "pull", "--ff-only"],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        die(f"pull failed: {r.stderr.strip()}")
+    ok("updated - changed sections only")
+    if any(f.startswith("laicore") or f == "lai.py" for f in files):
+        info("code changed: lai restart")
+    if any(f.startswith("ui/") for f in files):
+        info("dashboard changed: it reloads on next open")
+    if any(f.startswith("config/catalog") for f in files):
+        info("catalog changed: lai plan to re-evaluate")
+    notify_os("lai updated", f"{behind} change(s) applied - see CHANGELOG")

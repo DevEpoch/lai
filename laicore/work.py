@@ -4,19 +4,34 @@ from .core import *  # noqa: F401,F403
 
 SKILLS_DIR = ROOT / "skills"
 
-def list_skills():
+def skill_dirs(project=None):
+    """Skill libraries, in lookup order: lai's own, then the project's."""
+    dirs = [SKILLS_DIR]
+    proj = Path(project or ".").resolve() / ".lai" / "skills"
+    if proj.exists():
+        dirs.append(proj)
+    return dirs
+
+
+def list_skills(project=None):
     out = {}
-    if SKILLS_DIR.exists():
-        for d in sorted(SKILLS_DIR.iterdir()):
+    for base in skill_dirs(project):
+        if not base.exists():
+            continue
+        scope = "project" if ".lai" in str(base) else "built-in"
+        for d in sorted(base.iterdir()):
             meta = load_json(d / "skill.json")
             if meta:
-                out[d.name] = meta
+                out[d.name] = dict(meta, scope=scope)
     return out
 
 def install_skill(name, project_path, force=False):
     """Copy a skill into a project. Returns list of actions taken."""
-    src = SKILLS_DIR / name
-    meta = load_json(src / "skill.json")
+    src = None
+    for base in skill_dirs(project_path):
+        if load_json(base / name / "skill.json"):
+            src = base / name  # project-local definition wins
+    meta = load_json((src or SKILLS_DIR / name) / "skill.json")
     if not meta:
         raise ValueError(f"unknown skill '{name}' - see `lai skill list`")
     dest = Path(project_path).expanduser().resolve()
@@ -61,14 +76,66 @@ def install_skill(name, project_path, force=False):
             actions.append(f"registered mode '{mode['slug']}' in .roomodes")
     return actions
 
+SKILL_GEN_PROMPT = (
+    "Write concise agent rules (markdown, numbered list, max 10 rules) for "
+    "a coding-agent skill named '{name}'. The skill purpose: {desc}. "
+    "Rules must be imperative, verifiable, and specific - the style of a "
+    "strict senior engineer. No preamble; output ONLY the markdown starting "
+    "with '# {name} rules'.")
+
+
 def cmd_skill(args):
-    skills = list_skills()
+    skills = list_skills(getattr(args, "path", "."))
     if args.action == "list" or not args.action:
         print()
         for name, meta in skills.items():
-            print(f"  {c('1', name.ljust(12))} {meta.get('description', '')}")
-        print(c("90", "\n  install into a project:  lai skill add <name> "
+            tag = c("90", "[" + meta.get("scope", "built-in") + "] ")
+            print(f"  {c('1', name.ljust(12))} {tag}"
+                  f"{meta.get('description', '')}")
+        print(c("90", "\n  add to a project:   lai skill add <name> "
                       "[--path <project>]"))
+        print(c("90", "  create your own:    lai skill new <name> "
+                      "[--ai description] [--project <path>]"))
+        return
+    if args.action == "new":
+        if not args.name:
+            die("usage: lai skill new <name> [--ai description] "
+                "[--project <path>]")
+        name = sanitize_name(args.name).replace("_", "-")
+        proj = getattr(args, "project", None)
+        base = (Path(proj).resolve() / ".lai" / "skills" / name) if proj \
+            else SKILLS_DIR / name
+        if (base / "skill.json").exists():
+            die(f"skill '{name}' already exists at {base}")
+        desc = getattr(args, "ai", None)
+        if desc:
+            info(f"asking your local model to draft the '{name}' rules...")
+            body = llm_chat(SKILL_GEN_PROMPT.format(name=name, desc=desc),
+                            temperature=0.3)
+            body = re.sub(r"^```[^\n]*\n|```\s*$", "", body.strip(),
+                          flags=re.M).strip() + "\n"
+            description = desc
+        else:
+            body = (f"# {name} rules\n\n"
+                    "1. <write the first rule - imperative and "
+                    "verifiable>\n2. <...>\n")
+            description = f"Custom skill: {name} (edit me)"
+        rules = base / "project" / ".roo" / "rules" / f"{name}.md"
+        rules.parent.mkdir(parents=True, exist_ok=True)
+        rules.write_text(body, encoding="utf-8", newline="\n")
+        (base / "skill.json").write_text(json.dumps(
+            {"description": description}, indent=2),
+            encoding="utf-8", newline="\n")
+        ok(f"skill '{name}' created at {base}")
+        if desc:
+            print(c("90", "  --- generated rules "
+                          "(REVIEW before trusting them) ---"))
+            print(body)
+        where = "this project (committed - the whole team gets it)" \
+            if proj else "the lai skill library"
+        extra = "" if proj else " --path <project>"
+        info(f"lives in {where}. Install into a project: "
+             f"lai skill add {name}{extra}")
         return
     if args.action == "add":
         if not args.name:

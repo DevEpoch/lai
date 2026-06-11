@@ -1,0 +1,3 @@
+{
+  "description": "Security review lens: a checklist the agent applies to every change touching input handling, auth, secrets, file/network/process access, or dependencies."
+}

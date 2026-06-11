@@ -131,3 +131,23 @@ a:hover { text-decoration: underline; }
 .msg pre { background: none; border: 0; padding: 0; margin: 0; max-height: none; }
 .msg.user { align-self: flex-end; background: #1b2334; border-color: #2c3a55; }
 .msg.assistant { align-self: flex-start; background: #141a14; border-color: #234023; }
+
+/* RTL (fa/ar) - layout mirrors; code/identifiers stay LTR on purpose */
+[dir="rtl"] body, [dir="rtl"] input, [dir="rtl"] button, [dir="rtl"] select {
+  font-family: "Segoe UI", Tahoma, var(--sans); }
+[dir="rtl"] .side { border-right: 0; border-left: 1px solid var(--line); }
+[dir="rtl"] .nav-item:hover { transform: translateX(-2px); }
+[dir="rtl"] th, [dir="rtl"] td { text-align: right; }
+[dir="rtl"] .toasts { right: auto; left: 18px; }
+[dir="rtl"] .toast { border-left: 1px solid var(--line);
+  border-right: 3px solid var(--acc); }
+[dir="rtl"] .toast.err { border-right-color: var(--bad); }
+[dir="rtl"] .dot { margin-right: 0; margin-left: 8px; }
+[dir="rtl"] .msg.user { align-self: flex-start; }
+[dir="rtl"] .msg.assistant { align-self: flex-end; }
+/* never flip technical content: commands, ids, paths, numbers, logs */
+.mono, pre, code, .num, input, .bar {
+  direction: ltr; unicode-bidi: isolate; }
+[dir="rtl"] .mono, [dir="rtl"] pre, [dir="rtl"] code, [dir="rtl"] .num {
+  text-align: left; }
+[dir="rtl"] input::placeholder { direction: rtl; text-align: right; }

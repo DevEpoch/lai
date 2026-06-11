@@ -38,6 +38,9 @@ Commands:
   apikey     generate/remove an API key required on all model endpoints
   autostart  install a login service (Startup/systemd/launchd) + watchdog
   watchdog   start the stack and auto-restart it if it dies (foreground)
+  update     self-update lai over git: only changed files move, shows the
+             CHANGELOG delta first; --policy ask|auto|never; --list and
+             --to <version> switch between releases (no update server)
   upgrade    check llama.cpp / llama-swap releases against installed
   refresh    look for NEW models + catalog updates; notifies you; can run
              on a schedule (lai refresh --schedule weekly)
@@ -117,7 +120,7 @@ def main():
         "stop": cmd_stop, "restart": cmd_restart, "status": cmd_status,
         "bench": cmd_bench, "validate": cmd_validate, "apikey": cmd_apikey,
         "autostart": cmd_autostart, "watchdog": cmd_watchdog,
-        "upgrade": cmd_upgrade, "ui": cmd_ui, "new": cmd_new,
+        "upgrade": cmd_upgrade, "update": cmd_update, "ui": cmd_ui, "new": cmd_new,
         "gate": cmd_gate, "skill": cmd_skill, "git": cmd_git,
         "connect": cmd_connect, "share": cmd_share, "tune": cmd_tune,
         "docs": cmd_docs, "chat": cmd_chat, "shortcut": cmd_shortcut,
@@ -183,6 +186,17 @@ def main():
             sp.add_argument("--param", action="append", default=None,
                             help="extra provider/model setting k=v "
                                  "(repeatable), e.g. reasoning_effort=low")
+        if name == "update":
+            sp.add_argument("--check", action="store_true",
+                            help="show what would change, do not apply")
+            sp.add_argument("--policy", default=None,
+                            choices=["ask", "auto", "never"],
+                            help="set the standing update behavior")
+            sp.add_argument("--list", dest="list_versions",
+                            action="store_true",
+                            help="show released versions")
+            sp.add_argument("--to", default=None,
+                            help="switch to a version tag (or main)")
         if name == "refresh":
             sp.add_argument("--quiet", action="store_true",
                             help="no console output; OS notification only "
@@ -238,13 +252,19 @@ def main():
                             help="enable missing roles / offer downloads")
         if name == "skill":
             sp.add_argument("action", nargs="?", default="list",
-                            choices=["list", "add"])
+                            choices=["list", "add", "new"])
             sp.add_argument("name", nargs="?", default=None,
                             help="skill name (for add)")
             sp.add_argument("--path", default=".",
                             help="project directory (default: current)")
             sp.add_argument("--force", action="store_true",
                             help="overwrite existing files")
+            sp.add_argument("--ai", default=None,
+                            help="(new) let the local model draft the "
+                                 "rules from this description")
+            sp.add_argument("--project", default=None,
+                            help="(new) create inside a project "
+                                 "(.lai/skills/ - travels with the repo)")
         if name == "git":
             sp.add_argument("action",
                             choices=["review", "commit", "resolve",

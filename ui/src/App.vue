@@ -4,16 +4,22 @@ import {
   CloudProvider, DownloadItem, GateRow, Overview, PortRow,
   Project, ServiceStatus, get, post,
 } from "./api";
+import { Lang, lang, t } from "./i18n";
 
 type ViewId = "home" | "overview" | "plan" | "projects" | "cloud" | "system" | "logs";
 const NAV: { id: ViewId; ico: string; label: string }[] = [
-  { id: "home", ico: "⌂", label: "Home" },
-  { id: "overview", ico: "◉", label: "Overview" },
-  { id: "plan", ico: "▦", label: "Models & Plan" },
-  { id: "projects", ico: "❖", label: "Projects" },
-  { id: "cloud", ico: "☁", label: "Cloud" },
-  { id: "system", ico: "⚙", label: "System" },
-  { id: "logs", ico: "≡", label: "Logs" },
+  { id: "home", ico: "⌂", label: "nav.home" },
+  { id: "overview", ico: "◉", label: "nav.overview" },
+  { id: "plan", ico: "▦", label: "nav.plan" },
+  { id: "projects", ico: "❖", label: "nav.projects" },
+  { id: "cloud", ico: "☁", label: "nav.cloud" },
+  { id: "system", ico: "⚙", label: "nav.system" },
+  { id: "logs", ico: "≡", label: "nav.logs" },
+];
+const LANGS: { id: Lang; label: string }[] = [
+  { id: "en", label: "English" },
+  { id: "fa", label: "فارسی" },
+  { id: "ar", label: "العربية" },
 ];
 
 const ICON = "/icon.svg"; // served by lai at runtime - not a bundled asset
@@ -73,7 +79,7 @@ async function loadCandidates(): Promise<void> {
 const hw = computed(() => o.value?.choices?.hardware);
 const hwLine = computed(() => {
   const ch = o.value?.choices;
-  if (!ch || !hw.value) return "no plan yet — use Home or Models & Plan";
+  if (!ch || !hw.value) return t("up.to.date");
   return `${ch.tier} · ${hw.value.gpus.map(g => g.name).join(", ") || "no GPU"} · ` +
     `${hw.value.vram_gb} GB VRAM · ${hw.value.ram_gb} GB RAM · ${ch.engine}` +
     (o.value?.remote ? ` · ⇄ ${o.value.remote.host}:${o.value.remote.port}` : "");
@@ -141,11 +147,8 @@ const homeState = computed<"setup" | "downloading" | "starting" | "ready">(() =>
   return swapUp.value ? "ready" : "starting";
 });
 const homePct = computed(() => dlTotal.value ? Math.min(99, Math.round(dlHave.value / dlTotal.value * 100)) : 0);
-const HOME_TEXT: Record<string, { big: string; small: string }> = {
-  setup: { big: "Let's set up your AI!", small: "One click. Everything is free and stays on this computer." },
-  downloading: { big: "Getting your AI ready…", small: "Downloading the AI brains. You can keep using the computer." },
-  starting: { big: "Almost there!", small: "Your AI is installed — press Start to wake it up." },
-  ready: { big: "Your AI is ready! 🎉", small: "Ask it anything below — it runs 100% on this computer." },
+const HOME_KEY: Record<string, string> = {
+  setup: "setup", downloading: "down", starting: "start", ready: "ready",
 };
 
 async function easySetup(): Promise<void> {
@@ -186,11 +189,14 @@ onUnmounted(() => window.clearInterval(timer));
       <div v-for="n in NAV" :key="n.id" class="nav-item"
            :class="{ active: view === n.id }"
            @click="view = n.id; refresh(); if (n.id === 'logs') loadLog();">
-        <span class="ico">{{ n.ico }}</span><span class="nav-label">{{ n.label }}</span>
+        <span class="ico">{{ n.ico }}</span><span class="nav-label">{{ t(n.label) }}</span>
       </div>
       <div class="side-foot">
-        lai {{ o?.lai_version }}<br />catalog {{ o?.choices?.catalog_version ?? "—" }}<br />
-        100% local · no telemetry
+        <select v-model="lang" style="margin-bottom:8px;width:100%">
+          <option v-for="l in LANGS" :key="l.id" :value="l.id">{{ l.label }}</option>
+        </select>
+        <span class="mono">lai {{ o?.lai_version }} · {{ o?.choices?.catalog_version ?? "—" }}</span><br />
+        {{ t("foot.local") }}
       </div>
     </aside>
 
@@ -198,9 +204,9 @@ onUnmounted(() => window.clearInterval(timer));
       <div class="topbar">
         <span>{{ hwLine }}</span>
         <span style="flex:1"></span>
-        <span class="pill" :class="{ ok: upCount > 0 }">{{ upCount }}/{{ services.length }} services</span>
-        <span class="pill" :class="{ busy: o?.running.download }">{{ o?.running.download ? "downloading" : "downloads idle" }}</span>
-        <span class="pill" :class="{ busy: o?.running.bench }">{{ o?.running.bench ? "benchmarking" : "bench idle" }}</span>
+        <span class="pill" :class="{ ok: upCount > 0 }">{{ upCount }}/{{ services.length }} {{ t("top.services") }}</span>
+        <span class="pill" :class="{ busy: o?.running.download }">{{ o?.running.download ? t("top.downloading") : t("top.dlidle") }}</span>
+        <span class="pill" :class="{ busy: o?.running.bench }">{{ o?.running.bench ? t("top.bench") : t("top.benchidle") }}</span>
       </div>
 
       <div class="content" style="position:relative">
@@ -211,108 +217,105 @@ onUnmounted(() => window.clearInterval(timer));
             <div class="card wide hero">
               <div class="hero-light" :class="homeState"></div>
               <div>
-                <div class="hero-big">{{ HOME_TEXT[homeState].big }}</div>
-                <div class="dim">{{ HOME_TEXT[homeState].small }}</div>
+                <div class="hero-big">{{ t(`home.${HOME_KEY[homeState]}.big`) }}</div>
+                <div class="dim">{{ t(`home.${HOME_KEY[homeState]}.small`) }}</div>
               </div>
               <div style="flex:1"></div>
               <button v-if="homeState === 'setup'" class="primary hero-btn" :disabled="busy.easy"
-                      @click="easySetup()">Set up my AI</button>
+                      @click="easySetup()">{{ t("home.btn.setup") }}</button>
               <button v-else-if="homeState === 'starting'" class="primary hero-btn" :disabled="busy.start"
-                      @click="act('start', () => post('/api/start'), 'Starting…')">Start my AI</button>
+                      @click="act('start', () => post('/api/start'), '…')">{{ t("home.btn.start") }}</button>
             </div>
 
             <div v-if="homeState === 'downloading'" class="card wide">
-              <h3>Progress · {{ homePct }}%</h3>
+              <h3>{{ t("home.progress") }} · {{ homePct }}%</h3>
               <div class="bar big"><i :style="{ width: homePct + '%' }"></i></div>
-              <div class="dim mt">{{ dlHave.toFixed(1) }} of {{ dlTotal.toFixed(1) }} GB —
-                small helpers arrive first, the big brain comes last. Safe to close and continue later.</div>
+              <div class="dim mt">{{ dlHave.toFixed(1) }} {{ t("home.progress.note") }} {{ dlTotal.toFixed(1) }} {{ t("home.progress.note2") }}</div>
             </div>
 
             <div class="card wide">
-              <h3>Talk to your AI</h3>
+              <h3>{{ t("home.chat.title") }}</h3>
               <div class="chatbox" v-if="chatMsgs.length">
                 <div v-for="(m, i) in chatMsgs" :key="i" class="msg" :class="m.role">
                   <pre>{{ m.content }}</pre>
                 </div>
-                <div v-if="chatBusy" class="msg assistant dim">thinking…</div>
+                <div v-if="chatBusy" class="msg assistant dim">{{ t("home.chat.thinking") }}</div>
               </div>
               <div class="row mt">
                 <input v-model="chatInput" :disabled="homeState !== 'ready'" style="flex:1"
-                       :placeholder="homeState === 'ready' ? 'try: write a snake game in Python' : 'your AI will be ready to chat soon…'"
+                       :placeholder="homeState === 'ready' ? t('home.chat.ph.ready') : t('home.chat.ph.wait')"
                        @keydown.enter="sendChat()" />
-                <button class="primary" :disabled="homeState !== 'ready' || chatBusy" @click="sendChat()">Send</button>
+                <button class="primary" :disabled="homeState !== 'ready' || chatBusy" @click="sendChat()">{{ t("btn.send") }}</button>
               </div>
-              <div class="dim mt">First answer takes a minute (the AI wakes up). For the full chat app with
-                history and files, open <a :href="svcUrl('open-webui :3001') ?? 'http://localhost:3001'" target="_blank">Open WebUI ↗</a></div>
+              <div class="dim mt">{{ t("home.chat.note") }} <a :href="svcUrl('open-webui :3001') ?? 'http://localhost:3001'" target="_blank">Open WebUI ↗</a></div>
             </div>
 
             <div v-if="o?.updates && (o.updates.new_models.length || o.updates.catalog_newer)" class="card wide">
-              <h3>✨ New AI models spotted ({{ o.updates.when.slice(0, 10) }})</h3>
-              <div class="dim" v-if="o.updates.catalog_newer">A newer recommendation catalog is published — apply it with <span class="mono">lai catalog --update</span>.</div>
+              <h3>{{ t("updates.title") }} ({{ o.updates.when.slice(0, 10) }})</h3>
+              <div class="dim" v-if="o.updates.catalog_newer">{{ t("updates.catalog") }} <span class="mono">lai catalog --update</span></div>
               <table v-if="o.updates.new_models.length"><tbody>
                 <tr v-for="m in o.updates.new_models.slice(0, 5)" :key="m.id">
                   <td class="mono">{{ m.id }}</td>
-                  <td class="dim" style="text-align:right">{{ m.downloads.toLocaleString() }} downloads</td>
+                  <td class="dim num">{{ m.downloads.toLocaleString() }} {{ t("updates.dl") }}</td>
                 </tr>
               </tbody></table>
-              <div class="dim mt">Nothing changes by itself — review them, add the good ones to the catalog, re-plan, and benchmark. Check runs: <span class="mono">lai refresh</span> (schedule: <span class="mono">--schedule weekly</span>).</div>
+              <div class="dim mt">{{ t("updates.note") }} <span class="mono">lai refresh</span></div>
             </div>
 
             <div class="card">
-              <h3>What can I do?</h3>
+              <h3>{{ t("home.what.title") }}</h3>
               <div class="dim">
-                · Ask for code, stories, homework help — anything<br />
-                · In a terminal: <span class="mono">lai chat</span><br />
-                · Make a real app: Projects tab → Create<br />
-                · Grown-up controls: the other tabs on the left
+                · {{ t("home.what.1") }}<br />
+                · {{ t("home.what.2") }} <span class="mono">lai chat</span><br />
+                · {{ t("home.what.3") }}<br />
+                · {{ t("home.what.4") }}
               </div>
             </div>
             <div class="card">
-              <h3>Is it private?</h3>
-              <div class="dim">Yes. The AI runs on this computer. No account, no cost,
-                no internet needed after setup, and nothing you type is sent anywhere.</div>
+              <h3>{{ t("home.priv.title") }}</h3>
+              <div class="dim">{{ t("home.priv.body") }}</div>
             </div>
           </div>
 
           <!-- ============ OVERVIEW ============ -->
           <div v-else-if="view === 'overview'" key="overview" class="grid">
             <div class="card">
-              <h3>Services</h3>
+              <h3>{{ t("card.services") }}</h3>
               <table><tbody>
                 <tr v-for="s in services" :key="s.name">
                   <td><span class="dot" :class="{ up: s.up }"></span>{{ s.name }}</td>
-                  <td class="dim">{{ s.up ? "up" : "down" }}</td>
-                  <td style="text-align:right"><a v-if="s.up && svcUrl(s.name)" :href="svcUrl(s.name)!" target="_blank">open ↗</a></td>
+                  <td class="dim">{{ s.up ? t("svc.up") : t("svc.down") }}</td>
+                  <td style="text-align:right"><a v-if="s.up && svcUrl(s.name)" :href="svcUrl(s.name)!" target="_blank">{{ t("open") }}</a></td>
                 </tr>
               </tbody></table>
               <div class="row mt">
-                <button class="primary" :disabled="busy.start" @click="act('start', () => post('/api/start'), 'stack started')">▶ Start</button>
-                <button :disabled="busy.restart" @click="act('restart', () => post('/api/restart'), 'restarted')">↻ Restart</button>
-                <button class="danger" :disabled="busy.stop" @click="act('stop', () => post('/api/stop'), 'stopped')">■ Stop</button>
+                <button class="primary" :disabled="busy.start" @click="act('start', () => post('/api/start'), 'stack started')">{{ t("btn.start") }}</button>
+                <button :disabled="busy.restart" @click="act('restart', () => post('/api/restart'), 'restarted')">{{ t("btn.restart") }}</button>
+                <button class="danger" :disabled="busy.stop" @click="act('stop', () => post('/api/stop'), 'stopped')">{{ t("btn.stop") }}</button>
               </div>
             </div>
 
             <div class="card">
-              <h3>Model downloads · {{ dlHave.toFixed(1) }} / {{ dlTotal.toFixed(1) }} GB</h3>
+              <h3>{{ t("card.downloads") }} · {{ dlHave.toFixed(1) }} / {{ dlTotal.toFixed(1) }} GB</h3>
               <table><tbody>
                 <tr v-for="d in downloads" :key="d.id">
                   <td style="width:42%">{{ d.id }}</td>
                   <td><div class="bar"><i :class="{ indet: !d.done && o?.running.download && d.have_gb < 0.05 }"
                       :style="{ width: (d.done ? 100 : Math.min(99, d.have_gb / d.expected_gb * 100)) + '%' }"></i></div></td>
                   <td class="dim" style="width:104px;text-align:right">
-                    {{ d.done ? "✓ done" : `${Math.min(99, Math.round(d.have_gb / d.expected_gb * 100))}% · ${d.expected_gb} GB` }}
+                    {{ d.done ? t("dl.done") : `${Math.min(99, Math.round(d.have_gb / d.expected_gb * 100))}% · ${d.expected_gb} GB` }}
                   </td>
                 </tr>
               </tbody></table>
               <div class="row mt">
-                <button class="primary" :disabled="o?.running.download" @click="act('dl', () => post('/api/download', { action: 'start' }), 'download started')">⇣ Start</button>
-                <button :disabled="!o?.running.download" @click="act('dlp', () => post('/api/download', { action: 'pause' }), 'paused (resumable)')">⏸ Pause</button>
+                <button class="primary" :disabled="o?.running.download" @click="act('dl', () => post('/api/download', { action: 'start' }), 'download started')">{{ t("btn.dlstart") }}</button>
+                <button :disabled="!o?.running.download" @click="act('dlp', () => post('/api/download', { action: 'pause' }), 'paused (resumable)')">{{ t("btn.dlpause") }}</button>
               </div>
-              <div class="dim mt">Resumable across pauses, crashes, and reboots.</div>
+              <div class="dim mt">{{ t("dl.resume") }}</div>
             </div>
 
             <div class="card">
-              <h3>Active models</h3>
+              <h3>{{ t("card.models") }}</h3>
               <table><tbody>
                 <tr v-for="r in ROLE_ORDER" :key="r">
                   <td class="dim">{{ r }}</td>
@@ -326,10 +329,10 @@ onUnmounted(() => window.clearInterval(timer));
             </div>
 
             <div class="card">
-              <h3>Benchmarks & terminal</h3>
+              <h3>{{ t("card.bench") }}</h3>
               <div class="row">
-                <button :disabled="o?.running.bench" @click="act('b1', () => post('/api/bench', { quality: false }), 'speed bench running')">Speed bench</button>
-                <button :disabled="o?.running.bench" @click="act('b2', () => post('/api/bench', { quality: true }), 'quality bench running')">Quality bench</button>
+                <button :disabled="o?.running.bench" @click="act('b1', () => post('/api/bench', { quality: false }), 'speed bench running')">{{ t("btn.speed") }}</button>
+                <button :disabled="o?.running.bench" @click="act('b2', () => post('/api/bench', { quality: true }), 'quality bench running')">{{ t("btn.quality") }}</button>
               </div>
               <pre class="mt" style="max-height:130px">lai chat            # streaming terminal assistant
 lai git review      # AI code review of your diff
@@ -341,13 +344,13 @@ lai info            # one-screen status</pre>
           <!-- ============ PLAN ============ -->
           <div v-else-if="view === 'plan'" key="plan" class="grid">
             <div class="card wide">
-              <h3>Use case & roles · tier {{ o?.choices?.tier ?? "—" }}</h3>
+              <h3>{{ t("card.usecase") }} · tier {{ o?.choices?.tier ?? "—" }}</h3>
               <div class="row">
                 <select v-model="usecase">
                   <option v-for="(d, id) in o?.usecases" :key="id" :value="id">{{ id }} — {{ d.label }}</option>
                 </select>
-                <button :disabled="busy.plan" @click="act('plan', async () => { await post('/api/plan', { usecase }); await loadCandidates(); }, 're-planned')">Re-plan</button>
-                <button class="primary" :disabled="busy.cfg" @click="act('cfg', () => post('/api/config'), 'config regenerated — restart to apply')">Apply config</button>
+                <button :disabled="busy.plan" @click="act('plan', async () => { await post('/api/plan', { usecase }); await loadCandidates(); }, 're-planned')">{{ t("btn.replan") }}</button>
+                <button class="primary" :disabled="busy.cfg" @click="act('cfg', () => post('/api/config'), 'config regenerated — restart to apply')">{{ t("btn.apply") }}</button>
               </div>
               <table class="mt">
                 <thead><tr><th>role</th><th>model</th><th>runs as</th><th>ctx</th><th>size</th></tr></thead>
@@ -376,17 +379,17 @@ lai info            # one-screen status</pre>
           <!-- ============ PROJECTS ============ -->
           <div v-else-if="view === 'projects'" key="projects" class="grid">
             <div class="card wide">
-              <h3>New project</h3>
+              <h3>{{ t("card.newproject") }}</h3>
               <div class="row">
                 <select v-model="newStack">
                   <option v-for="(d, id) in o?.stacks" :key="id" :value="id">{{ id }} — {{ d.label }}</option>
                 </select>
-                <input v-model="newPath" placeholder="path, e.g. D:\projects\mytool" style="flex:1;min-width:200px" />
-                <button class="primary" :disabled="busy.new" @click="act('new', () => post('/api/new', { stack: newStack, path: newPath }), 'project created — open it in VS Code')">Create</button>
+                <input v-model="newPath" :placeholder="t('ph.path')" style="flex:1;min-width:200px" />
+                <button class="primary" :disabled="busy.new" @click="act('new', () => post('/api/new', { stack: newStack, path: newPath }), 'project created — open it in VS Code')">{{ t("btn.create") }}</button>
               </div>
             </div>
             <div class="card wide">
-              <h3>Projects</h3>
+              <h3>{{ t("card.projects") }}</h3>
               <table><tbody>
                 <tr v-for="p in projects" :key="p.path">
                   <td>{{ p.name }}</td>
@@ -397,8 +400,8 @@ lai info            # one-screen status</pre>
                     </span>
                   </td>
                   <td style="text-align:right" class="row">
-                    <button @click="gate(p.path, false)">Gate</button>
-                    <button @click="gate(p.path, true)">Fix</button>
+                    <button @click="gate(p.path, false)">{{ t("btn.gate") }}</button>
+                    <button @click="gate(p.path, true)">{{ t("btn.fix") }}</button>
                     <select :id="'sk-' + p.name" style="max-width:130px">
                       <option v-for="(d, s) in o?.skills" :key="s" :value="s" :title="d">{{ s }}</option>
                     </select>
@@ -420,21 +423,19 @@ lai info            # one-screen status</pre>
           <!-- ============ CLOUD ============ -->
           <div v-else-if="view === 'cloud'" key="cloud" class="grid">
             <div class="card wide dim">
-              Local models are <b>always</b> the default. Cloud runs only when you explicitly pick a prefixed
-              model (<span class="mono">or: / oa: / an:</span>) — and with the defaults below it stays token-lean
-              (max_tokens 1024). Set a default per provider, then a bare prefix uses it.
+              {{ t("cloud.note") }}
             </div>
             <div class="card" v-for="p in cloud" :key="p.id">
               <h3>{{ p.id }} <span class="pill" :class="p.has_key ? 'ok' : ''">{{ p.has_key ? "key configured" : "no key" }}</span></h3>
               <div class="row">
                 <input :placeholder="p.has_key ? 'replace API key…' : 'paste API key…'" type="password"
                        :id="'key-' + p.id" style="flex:1" />
-                <button @click="act('ck', () => post('/api/cloudcfg', { action: 'add', provider: p.id, key: (document.getElementById('key-' + p.id) as HTMLInputElement).value }), 'key stored (gitignored)')">Save key</button>
-                <button class="danger" v-if="p.has_key" @click="act('cr', () => post('/api/cloudcfg', { action: 'remove', provider: p.id }), 'key removed')">Remove</button>
+                <button @click="act('ck', () => post('/api/cloudcfg', { action: 'add', provider: p.id, key: (document.getElementById('key-' + p.id) as HTMLInputElement).value }), 'key stored (gitignored)')">{{ t("btn.savekey") }}</button>
+                <button class="danger" v-if="p.has_key" @click="act('cr', () => post('/api/cloudcfg', { action: 'remove', provider: p.id }), 'key removed')">{{ t("btn.remove") }}</button>
               </div>
               <div class="row mt">
                 <input v-model="useModel[p.id]" :placeholder="p.default_model || 'default model id…'" style="flex:1" />
-                <button @click="act('cu', () => post('/api/cloudcfg', { action: 'use', provider: p.id, model: useModel[p.id] || p.default_model }), 'default model saved')">Set default</button>
+                <button @click="act('cu', () => post('/api/cloudcfg', { action: 'use', provider: p.id, model: useModel[p.id] || p.default_model }), 'default model saved')">{{ t("btn.setdefault") }}</button>
               </div>
               <div class="dim mt" v-if="p.default_model">default: <span class="mono">{{ p.prefix }}: → {{ p.default_model }}</span> · {{ p.params }}</div>
               <table class="mt"><tbody>
@@ -450,9 +451,9 @@ lai info            # one-screen status</pre>
           <!-- ============ SYSTEM ============ -->
           <div v-else-if="view === 'system'" key="system" class="grid">
             <div class="card wide">
-              <h3>Ports <span class="dim">(another app on a port? fix moves lai, never your app)</span></h3>
+              <h3>{{ t("card.ports") }} <span class="dim">{{ t("ports.note") }}</span></h3>
               <div class="row" style="margin-bottom:8px">
-                <button class="primary" :disabled="busy.pfix" @click="act('pfix', async () => { const r = await post<{ moved: Record<string, number> }>('/api/ports', { action: 'fix' }); toast(Object.keys(r.moved).length ? 'moved: ' + JSON.stringify(r.moved) + ' — restart + lai docker to apply' : 'no conflicts'); })">Fix conflicts</button>
+                <button class="primary" :disabled="busy.pfix" @click="act('pfix', async () => { const r = await post<{ moved: Record<string, number> }>('/api/ports', { action: 'fix' }); toast(Object.keys(r.moved).length ? 'moved: ' + JSON.stringify(r.moved) + ' — restart + lai docker to apply' : 'no conflicts'); })">{{ t("btn.fixconf") }}</button>
               </div>
               <table>
                 <thead><tr><th>service</th><th>default</th><th>current</th><th>status</th><th></th></tr></thead>
@@ -468,9 +469,9 @@ lai info            # one-screen status</pre>
               </table>
             </div>
             <div class="card">
-              <h3>Maintenance</h3>
+              <h3>{{ t("card.maint") }}</h3>
               <div class="row">
-                <button @click="act('verify', async () => { const r = await post<{ results: { id: string; status: string }[] }>('/api/verify'); toast(r.results.filter(x => x.status !== 'ok').length === 0 ? 'all catalog repos resolve ✓' : 'issues: ' + r.results.filter(x => x.status !== 'ok').map(x => x.id + '=' + x.status).join(', '), r.results.some(x => x.status === 'missing')); })">Verify catalog</button>
+                <button @click="act('verify', async () => { const r = await post<{ results: { id: string; status: string }[] }>('/api/verify'); toast(r.results.filter(x => x.status !== 'ok').length === 0 ? 'all catalog repos resolve ✓' : 'issues: ' + r.results.filter(x => x.status !== 'ok').map(x => x.id + '=' + x.status).join(', '), r.results.some(x => x.status === 'missing')); })">{{ t("btn.verify") }}</button>
               </div>
               <div class="dim mt">engines: {{ Object.entries(o?.versions ?? {}).map(([k, v]) => `${k} ${v}`).join(" · ") || "not installed" }}</div>
               <div class="dim mt">update check: <span class="mono">lai upgrade</span> · catalog: <span class="mono">lai catalog --update</span></div>
@@ -480,12 +481,12 @@ lai info            # one-screen status</pre>
           <!-- ============ LOGS ============ -->
           <div v-else key="logs" class="grid">
             <div class="card wide">
-              <h3>Logs</h3>
+              <h3>{{ t("card.logs") }}</h3>
               <div class="row" style="margin-bottom:10px">
                 <select v-model="logName" @change="loadLog()">
                   <option v-for="l in o?.logs" :key="l" :value="l">{{ l }}</option>
                 </select>
-                <button @click="loadLog()">Refresh</button>
+                <button @click="loadLog()">{{ t("btn.refresh") }}</button>
               </div>
               <pre style="max-height:460px">{{ logText || "select a log…" }}</pre>
             </div>
