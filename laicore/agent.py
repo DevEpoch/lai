@@ -214,6 +214,118 @@ def run_agent(root, question, model="coder", history=None):
     yield {"type": "done"}
 
 
+TASK_RE = re.compile(
+    r"^\s*(?:[-*]\s*\[(?P<done>[ xX])\]|(?P<num>\d+)[.)]|[-*])\s+"
+    r"(?P<text>\S.*)$")
+
+
+def parse_tasks(md):
+    """Checklist / numbered / bullet lines -> [{line, text, done, box}]."""
+    out = []
+    for i, line in enumerate(md.splitlines()):
+        m = TASK_RE.match(line)
+        if m and len(m.group("text")) > 2:
+            out.append({"line": i, "text": m.group("text").strip(),
+                        "done": (m.group("done") or " ").lower() == "x",
+                        "box": m.group("done") is not None})
+    return out
+
+
+def mark_done(md, line_no):
+    """Tick a checkbox line (or convert the bullet/number to one)."""
+    lines = md.splitlines()
+    t = TASK_RE.match(lines[line_no])
+    if t:
+        indent = lines[line_no][:len(lines[line_no])
+                                - len(lines[line_no].lstrip())]
+        lines[line_no] = f"{indent}- [x] {t.group('text')}"
+    return "\n".join(lines) + ("\n" if md.endswith("\n") else "")
+
+
+def _verify(root):
+    """Green/skip/red after each task. Returns (ok, detail)."""
+    out = t_run_check(root, "tests")
+    if out.startswith("(no tests"):
+        return True, "no tests - skipped"
+    ok = "\nOK" in out or out.strip().endswith("OK")
+    return ok, out[-1500:]
+
+
+def run_tasks(root, task_file, model="coder"):
+    """Do every unchecked task in an md file, one fresh agent run per
+    task, verifying (tests) and ticking the checkbox after each. The
+    deterministic loop lives HERE - the model only ever sees one task."""
+    root = Path(root).resolve()
+    f = _confine(root, Path(task_file).name) if not Path(task_file).is_file() \
+        else Path(task_file).resolve()
+    md = f.read_text(encoding="utf-8", errors="replace")
+    tasks = parse_tasks(md)
+    todo = [t for t in tasks if not t["done"]]
+    yield {"type": "plan", "total": len(tasks), "todo": len(todo)}
+    done_notes = []
+    for n, t in enumerate(todo, 1):
+        yield {"type": "task", "n": n, "total": len(todo),
+               "text": t["text"]}
+        remaining = "\n".join("- " + x["text"] for x in todo[n:])
+        q = (f"Work ONLY on this one task, then answer with a one-line "
+             f"summary of what you changed:\nTASK: {t['text']}\n"
+             + (f"Already done before this:\n"
+                + "\n".join(done_notes[-5:]) + "\n" if done_notes else "")
+             + (f"Do NOT touch these later tasks yet:\n{remaining}"
+                if remaining else ""))
+        last_text = ""
+        for ev in run_agent(root, q, model=model):
+            if ev["type"] == "text":
+                last_text = ev["text"]
+            if ev["type"] != "done":
+                yield ev
+        ok, detail = _verify(root)
+        yield {"type": "verify", "ok": ok, "detail": detail[-400:]}
+        if not ok:  # one repair attempt, then stop honestly
+            for ev in run_agent(root,
+                                "The checks fail after your last change. "
+                                "Fix ONLY this:\n" + detail, model=model):
+                if ev["type"] != "done":
+                    yield ev
+            ok, detail = _verify(root)
+            yield {"type": "verify", "ok": ok, "detail": detail[-400:]}
+            if not ok:
+                yield {"type": "halt", "after": n - 1,
+                       "text": f"stopped at task {n}: checks still red - "
+                               "fix manually, then rerun to resume"}
+                return
+        md = mark_done(md, t["line"])
+        f.write_text(md, encoding="utf-8", newline="\n")
+        done_notes.append(f"- {t['text']}: {last_text[:160]}")
+        yield {"type": "task_done", "n": n}
+    yield {"type": "all_done", "count": len(todo)}
+
+
+def cmd_tasks(args):
+    """lai tasks plan.md [--path DIR] [--model M] - run every unchecked
+    task, one by one, verified, resumable (rerun = continue)."""
+    root = Path(getattr(args, "path", None) or ".").resolve()
+    for ev in run_tasks(root, args.file,
+                        model=getattr(args, "model", None) or "coder"):
+        k = ev["type"]
+        if k == "plan":
+            info(f"{ev['todo']} of {ev['total']} tasks still open")
+        elif k == "task":
+            print()
+            info(f"task {ev['n']}/{ev['total']}: {ev['text']}")
+        elif k == "tool":
+            info(f"  tool: {ev['name']}")
+        elif k == "text":
+            print(ev["text"])
+        elif k == "verify":
+            (ok if ev["ok"] else warn)(f"checks: "
+                                       f"{'green' if ev['ok'] else 'RED'}")
+        elif k == "halt":
+            die(ev["text"])
+        elif k == "all_done":
+            ok(f"ALL {ev['count']} TASKS DONE - checklist is fully ticked")
+
+
 def cmd_agent(args):
     """lai agent "question" [--path DIR] [--model coder] - one-shot
     agent run in the terminal; the VS Code chat uses the same loop."""

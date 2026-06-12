@@ -5,7 +5,7 @@ from .stack import *  # noqa: F401,F403
 from .work import *  # noqa: F401,F403
 from .projects import *  # noqa: F401,F403
 from .webui import cmd_ui  # noqa: F401
-from .agent import cmd_agent  # noqa: F401
+from .agent import cmd_agent, cmd_tasks  # noqa: F401
 
 import argparse
 
@@ -188,7 +188,7 @@ def main():
         "docs": cmd_docs, "chat": cmd_chat, "shortcut": cmd_shortcut,
         "path": cmd_path,
         "cloud": cmd_cloud, "info": cmd_info, "hftoken": cmd_hftoken, "ports": cmd_ports, "go": cmd_go, "refresh": cmd_refresh, "selftest": cmd_selftest, "mirror": cmd_mirror, "doctor": cmd_doctor, "storage": cmd_storage,
-        "vscode": cmd_vscode, "agent": cmd_agent,
+        "vscode": cmd_vscode, "agent": cmd_agent, "tasks": cmd_tasks,
     }
     for name in commands:
         sp = sub.add_parser(name, parents=[common])
@@ -229,6 +229,12 @@ def main():
                             help="url/file (add) or query (search)")
             sp.add_argument("--project", default=".",
                             help="project dir -> per-project collection")
+        if name == "tasks":
+            sp.add_argument("file", help="markdown checklist, e.g. plan.md")
+            sp.add_argument("--path", default=".",
+                            help="project folder (default: current)")
+            sp.add_argument("--model", default=None,
+                            help="model/role (default: coder)")
         if name == "agent":
             sp.add_argument("question", nargs="*",
                             help='e.g. lai agent "find problems in this '

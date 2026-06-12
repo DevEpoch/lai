@@ -4,6 +4,17 @@ All notable changes to lai. Format: [Keep a Changelog](https://keepachangelog.co
 Rule: every `VERSION` bump in `laicore/core.py` adds an entry here - `lai update`
 shows users exactly these entries when offering an update.
 
+## [0.15.0] - 2026-06-12
+
+### Added
+- `lai tasks plan.md`: give lai a markdown task list ("do all of these
+  one by one") and it actually finishes - a deterministic Python loop
+  runs ONE fresh agent per task (clean context every time), runs your
+  tests after each, makes one repair attempt on red and otherwise
+  stops honestly, and ticks `- [x]` in the file as it goes. Numbered
+  and bullet lists become checkboxes when completed. Interrupt any
+  time; rerunning resumes from the first unchecked task.
+
 ## [0.14.0] - 2026-06-12
 
 ### Added
