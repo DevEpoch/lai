@@ -363,7 +363,7 @@ def cmd_ui(args):
                                         "setup-ui.log")
                     self._send({"ok": started})
                 elif u.path == "/api/agent":
-                    from .agent import run_agent
+                    from .agent import smart_run
                     try:
                         root = _web_path(body.get("path") or str(Path.home()))
                     except ValueError as e:
@@ -374,7 +374,7 @@ def cmd_ui(args):
                     self.send_header("Cache-Control", "no-cache")
                     self.end_headers()
                     try:
-                        for ev in run_agent(
+                        for ev in smart_run(
                                 root, str(body.get("text") or ""),
                                 model=body.get("model") or "coder",
                                 history=body.get("history") or []):

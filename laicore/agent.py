@@ -301,6 +301,41 @@ def run_tasks(root, task_file, model="coder"):
     yield {"type": "all_done", "count": len(todo)}
 
 
+TASKFILE_RE = re.compile(r"[\w./\\-]+\.md\b")
+TASK_INTENT_RE = re.compile(
+    r"\b(do|run|finish|complete|execute|work)\b[\s\S]{0,80}"
+    r"\b(task|checklist|todo)s?\b"
+    r"|انجام|اجرا|تکمیل|أكمل|نفذ", re.IGNORECASE)
+
+
+def detect_taskfile(root, text):
+    """'do all the tasks in plan.md' -> the md path, else None."""
+    m = TASKFILE_RE.search(text or "")
+    if not (m and TASK_INTENT_RE.search(text)):
+        return None
+    try:
+        f = _confine(root, m.group(0))
+    except ValueError:
+        return None
+    if f.is_file() and any(not t["done"] for t in parse_tasks(
+            f.read_text(encoding="utf-8", errors="replace"))):
+        return f
+    return None
+
+
+def smart_run(root, text, model="coder", history=None):
+    """One front door for every chat surface: a task-list request runs
+    the checklist runner; anything else runs the single-shot agent."""
+    f = detect_taskfile(root, text)
+    if f:
+        yield {"type": "text",
+               "text": f"Running the checklist in {f.name} - one task "
+                       "at a time, tests after each, boxes ticked live."}
+        yield from run_tasks(root, str(f), model=model)
+    else:
+        yield from run_agent(root, text, model=model, history=history)
+
+
 def cmd_tasks(args):
     """lai tasks plan.md [--path DIR] [--model M] - run every unchecked
     task, one by one, verified, resumable (rerun = continue)."""
@@ -333,11 +368,19 @@ def cmd_agent(args):
     q = " ".join(getattr(args, "question", []) or [])
     if not q:
         die('usage: lai agent "review this project and list problems"')
-    for ev in run_agent(root, q, model=getattr(args, "model", None)
+    for ev in smart_run(root, q, model=getattr(args, "model", None)
                         or "coder"):
         if ev["type"] == "skill":
             info(f"skill: {ev['name']}")
         elif ev["type"] == "tool":
             info(f"tool: {ev['name']} {json.dumps(ev['args'])[:120]}")
+        elif ev["type"] == "task":
+            info(f"task {ev['n']}/{ev['total']}: {ev['text']}")
+        elif ev["type"] == "verify":
+            (ok if ev["ok"] else warn)(
+                f"checks: {'green' if ev['ok'] else 'RED'}")
+        elif ev["type"] in ("halt", "all_done"):
+            (warn if ev["type"] == "halt" else ok)(
+                ev.get("text") or f"ALL {ev.get('count')} TASKS DONE")
         elif ev["type"] == "text":
             print(ev["text"])

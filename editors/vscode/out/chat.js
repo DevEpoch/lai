@@ -260,6 +260,24 @@ class LaiChatProvider {
                         post({ type: "note",
                             text: `> ${ev.name} ${JSON.stringify(ev.args ?? {})
                                 .slice(0, 100)}` });
+                    if (ev.type === "task")
+                        post({ type: "note",
+                            text: `[task ${ev.n}/${ev.total}] ${ev.text}` });
+                    if (ev.type === "verify")
+                        post({ type: "note",
+                            text: ev.ok ? "checks: green ✓" : "checks: RED ✗" });
+                    if (ev.type === "task_done")
+                        post({ type: "note",
+                            text: `[x] ticked in the file` });
+                    if (ev.type === "halt") {
+                        reply += ev.text + "\n";
+                        post({ type: "delta", text: (ev.text ?? "") + "\n" });
+                    }
+                    if (ev.type === "all_done") {
+                        const t = `ALL ${ev.count} TASKS DONE - checklist ticked.`;
+                        reply += t;
+                        post({ type: "delta", text: t });
+                    }
                     if (ev.type === "text" && ev.text) {
                         reply += ev.text + "\n";
                         post({ type: "delta", text: ev.text + "\n" });

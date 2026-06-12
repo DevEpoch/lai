@@ -17,7 +17,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-VERSION = "0.15.0"
+VERSION = "0.16.0"
 
 SYSTEM = platform.system()
 

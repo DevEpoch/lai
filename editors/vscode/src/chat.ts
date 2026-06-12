@@ -188,13 +188,28 @@ export class LaiChatProvider implements vscode.WebviewViewProvider {
         for (const line of lines) {
           if (!line.startsWith("data:")) continue;
           let ev: { type: string; name?: string; text?: string;
-                    args?: unknown };
+                    args?: unknown; n?: number; total?: number;
+                    ok?: boolean; count?: number };
           try { ev = JSON.parse(line.slice(5)); } catch { continue; }
           if (ev.type === "skill") post({ type: "note",
             text: `* skill: ${ev.name}` });
           if (ev.type === "tool") post({ type: "note",
             text: `> ${ev.name} ${JSON.stringify(ev.args ?? {})
               .slice(0, 100)}` });
+          if (ev.type === "task") post({ type: "note",
+            text: `[task ${ev.n}/${ev.total}] ${ev.text}` });
+          if (ev.type === "verify") post({ type: "note",
+            text: ev.ok ? "checks: green ✓" : "checks: RED ✗" });
+          if (ev.type === "task_done") post({ type: "note",
+            text: `[x] ticked in the file` });
+          if (ev.type === "halt") {
+            reply += ev.text + "\n";
+            post({ type: "delta", text: (ev.text ?? "") + "\n" });
+          }
+          if (ev.type === "all_done") {
+            const t = `ALL ${ev.count} TASKS DONE - checklist ticked.`;
+            reply += t; post({ type: "delta", text: t });
+          }
           if (ev.type === "text" && ev.text) {
             reply += ev.text + "\n";
             post({ type: "delta", text: ev.text + "\n" });

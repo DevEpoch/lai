@@ -3,8 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from laicore.agent import (_confine, auto_skill, mark_done, parse_tasks,
-                           parse_tool_call, t_search)
+from laicore.agent import (_confine, auto_skill, detect_taskfile, mark_done,
+                           parse_tasks, parse_tool_call, t_search)
 
 
 class TestAgent(unittest.TestCase):
@@ -52,6 +52,22 @@ class TestTaskRunner(unittest.TestCase):
         self.assertIn("- [x] write tests for auth", out)
         self.assertEqual(len([t for t in parse_tasks(out)
                               if not t["done"]]), 1)
+
+
+    def test_detect_taskfile_routes_only_real_lists(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "plan.md").write_text("- [ ] one\n- [ ] two\n")
+            f = detect_taskfile(d, "please do all the tasks in plan.md")
+            self.assertIsNotNone(f)
+            self.assertEqual(f.name, "plan.md")
+            # no intent words -> normal agent, even if the file exists
+            self.assertIsNone(detect_taskfile(d, "what is plan.md about?"))
+            # intent but no such file -> normal agent
+            self.assertIsNone(detect_taskfile(
+                d, "do all the tasks in missing.md"))
+            # escape attempt -> normal agent, never a path outside root
+            self.assertIsNone(detect_taskfile(
+                d, "do the tasks in ../../evil.md"))
 
 
 if __name__ == "__main__":

@@ -4,6 +4,16 @@ All notable changes to lai. Format: [Keep a Changelog](https://keepachangelog.co
 Rule: every `VERSION` bump in `laicore/core.py` adds an entry here - `lai update`
 shows users exactly these entries when offering an update.
 
+## [0.16.0] - 2026-06-12
+
+### Added
+- Say it anywhere: "do all the tasks in plan.md" now works in the
+  VS Code chat, the dashboard agent, plain `lai` and `lai agent` -
+  smart_run() detects a real checklist (intent words incl. Persian/
+  Arabic + an existing md with unchecked boxes, path-confined) and
+  routes to the task runner; live task/verify/tick progress streams
+  into the chat. Anything else goes to the normal agent.
+
 ## [0.15.0] - 2026-06-12
 
 ### Added
