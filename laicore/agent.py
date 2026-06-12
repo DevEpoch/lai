@@ -18,9 +18,15 @@ Tools:
 - list_files {"pattern": "**/*.py"}  -> project file list
 - read_file  {"path": "..."}         -> file content
 - search     {"regex": "..."}        -> grep across the project
-- write_file {"path": "...", "content": "..."} -> create/overwrite a file
+- edit_file  {"path": "...", "old": "...", "new": "..."} -> replace the
+  exact text 'old' (must match once) with 'new'. PREFER this for
+  existing files - never rewrite a whole file to change a few lines.
+- write_file {"path": "...", "content": "..."} -> create a NEW file
 - run_check  {"what": "gate"|"tests"} -> run the project gate or test suite
-When you have everything you need, answer normally (no tool block)."""
+Rules: read a file before editing it. Make the smallest change that
+works. After your last tool call, answer with a short summary of what
+you changed and why. When you have everything you need, answer
+normally (no tool block)."""
 
 AGENT_SYS = """You are lai, a precise local AI pair-programmer working
 INSIDE the user's project at {root}. Nothing leaves this machine.
@@ -102,6 +108,25 @@ def t_write_file(root, path, content):
     return f"wrote {path} ({len(str(content))} chars)"
 
 
+def t_edit_file(root, path, old, new):
+    """Claude-Code-style exact-text edit: safest mutation for local
+    models - no whole-file regeneration, no drift."""
+    f = _confine(root, path)
+    if not f.is_file():
+        return f"(not a file: {path})"
+    text = f.read_text(encoding="utf-8", errors="replace")
+    n = text.count(str(old))
+    if n == 0:
+        return ("(old text not found - read_file the file and copy the "
+                "text EXACTLY, including whitespace)")
+    if n > 1:
+        return f"(old text appears {n} times - include more surrounding "\
+               "lines so it is unique)"
+    f.write_text(text.replace(str(old), str(new), 1),
+                 encoding="utf-8", newline="\n")
+    return f"edited {path}"
+
+
 def t_run_check(root, what="tests"):
     if what == "gate":
         cli = [sys.executable, str(ROOT / "lai.py"), "gate",
@@ -120,7 +145,7 @@ def t_run_check(root, what="tests"):
 
 TOOLS = {"list_files": t_list_files, "read_file": t_read_file,
          "search": t_search, "write_file": t_write_file,
-         "run_check": t_run_check}
+         "edit_file": t_edit_file, "run_check": t_run_check}
 
 TOOL_RE = re.compile(r"```tool\s*\n(\{.*?\})\s*\n?```", re.DOTALL)
 

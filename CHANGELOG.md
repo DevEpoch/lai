@@ -4,6 +4,16 @@ All notable changes to lai. Format: [Keep a Changelog](https://keepachangelog.co
 Rule: every `VERSION` bump in `laicore/core.py` adds an entry here - `lai update`
 shows users exactly these entries when offering an update.
 
+## [0.17.0] - 2026-06-12
+
+### Added
+- `edit_file` agent tool: exact-text replace (must match exactly once)
+  - the Claude-Code-style editing primitive. The agent is instructed
+  to read before editing and never rewrite whole files for small
+  changes; `write_file` is for new files now.
+- docs/11-agent.md + README section: the agent, task runner, chat
+  surfaces, and the honest differences from Claude Code/Codex.
+
 ## [0.16.0] - 2026-06-12
 
 ### Added

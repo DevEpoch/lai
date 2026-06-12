@@ -138,6 +138,25 @@ the two.** A teammate clones the project on any OS, runs `lai gate --fix`, appro
 downloads, and has the identical environment - no per-project settings to switch, ever.
 Full team workflow: [docs/07-projects.md](docs/07-projects.md).
 
+## The agent: code like Claude Code, fully local
+
+```text
+lai                            # interactive session - just type what you want
+lai agent "review this project and list problems"
+lai tasks plan.md              # do EVERY task in a markdown checklist, one by
+                               #   one: fresh agent per task, tests after each,
+                               #   boxes ticked live, honest stop on red, rerun
+                               #   to resume - or say "do all the tasks in
+                               #   plan.md" in any chat (en/fa/ar)
+```
+
+Skills are matched to each request automatically; the model uses tools on its
+own when needed - list/read/search/`edit_file` (exact-text replace)/write
+files, run the gate or tests - every path confined to the project, every step
+shown in chat. Works with any local model (fenced tool blocks, no special
+template). In VS Code: `lai: Open Chat as Editor Tab` for the Claude-Code-style
+panel. Details: [docs/11-agent.md](docs/11-agent.md).
+
 ## Skills, research, and git AI
 
 ```text
@@ -243,8 +262,9 @@ tools/ models/ logs/ run/ benchmarks/   runtime artifacts                  (giti
 8. [Skills, web research, prompt enhancement, git AI](docs/08-skills-research-git.md)
 9. [Team server, auto-tuning, docs RAG, updates](docs/09-team-tune-docsrag.md)
 10. [Cloud fallback - optional, explicit, minimal](docs/10-cloud-fallback.md)
-11. [LLM reference - complete machine-oriented surface](docs/llm-reference.md)
-12. [Easy start - for absolute beginners](docs/easy-start.md)
+11. [The lai agent - Claude-Code-style coding, fully local](docs/11-agent.md)
+12. [LLM reference - complete machine-oriented surface](docs/llm-reference.md)
+13. [Easy start - for absolute beginners](docs/easy-start.md)
 
 ## For LLMs and AI agents
 

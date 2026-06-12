@@ -4,7 +4,8 @@ import unittest
 from pathlib import Path
 
 from laicore.agent import (_confine, auto_skill, detect_taskfile, mark_done,
-                           parse_tasks, parse_tool_call, t_search)
+                           parse_tasks, parse_tool_call, t_edit_file,
+                           t_search)
 
 
 class TestAgent(unittest.TestCase):
@@ -30,6 +31,18 @@ class TestAgent(unittest.TestCase):
         text, name = auto_skill("please review my code for problems")
         self.assertIsNotNone(name)  # some relevant skill was matched
         self.assertIn("Active skill", text)
+
+
+class TestEditFile(unittest.TestCase):
+    def test_exact_edit_unique_ambiguous_missing(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "a.py"
+            f.write_text("x = 1\ny = 1\n")
+            self.assertIn("edited", t_edit_file(d, "a.py", "x = 1", "x = 2"))
+            self.assertEqual(f.read_text(), "x = 2\ny = 1\n")
+            self.assertIn("not found", t_edit_file(d, "a.py", "zzz", "q"))
+            f.write_text("a\na\n")
+            self.assertIn("2 times", t_edit_file(d, "a.py", "a", "b"))
 
 
 class TestTaskRunner(unittest.TestCase):
