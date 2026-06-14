@@ -31,7 +31,7 @@
                             "@types/vscode":  "^1.85.0",
                             "@vscode/vsce":  "^2.26.0",
                             "typescript":  "^5.4.0",
-                            "vitest":  "^3.2.4"
+                            "vitest":  "^4.1.8"
                         },
     "contributes":  {
                         "viewsContainers":  {
